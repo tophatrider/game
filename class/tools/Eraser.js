@@ -14,17 +14,17 @@ export default class extends Tool {
 	}
 
 	press() {
-		this.scene.track.erase(this.mouse.position);
+		this.scene.erase(this.mouse.position);
 	}
 
 	stroke() {
-		this.mouse.down && this.scene.track.erase(this.mouse.position);
+		this.mouse.down && this.scene.erase(this.mouse.position);
 	}
 
 	draw(ctx) {
 		ctx.beginPath()
 		let position = this.mouse.position.toPixel();
-		ctx.arc(position.x, position.y, (this.size - 1) * this.scene.camera.zoom, 0, 2 * Math.PI)
+		ctx.arc(position.x, position.y, (this.size - 1) * this.scene.zoom, 0, 2 * Math.PI)
 		ctx.save()
 		ctx.fillStyle = '#ffb6c199'
 		ctx.fill()

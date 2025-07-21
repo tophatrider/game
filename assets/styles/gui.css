@@ -1,0 +1,422 @@
+:host {
+	position: relative;
+}
+
+bhr-game-toolbar>section {
+	backdrop-filter: blur(2px) brightness(.8);
+	border: 1px solid var(--accent-color);
+	border-radius: 4px;
+	overflow: hidden;
+	position: absolute;
+}
+
+/* experimental animations - add settings to enable/disable */
+bhr-game-toolbar>section:hover {
+	scale: 1.05;
+	transition: scale 200ms;
+}
+
+bhr-game-toolbar .toolbar-item:hover:active::before { scale: .8 }
+/* experimental animations end */
+
+bhr-game-toolbar .bottom { bottom: 0 }
+bhr-game-toolbar .left { left: 0 }
+bhr-game-toolbar .right { right: 0 }
+bhr-game-toolbar .top { top: 0 }
+bhr-game-toolbar .center {
+	display: flex;
+	left: 0;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	max-width: 100vw;
+	right: 0;
+	width: fit-content;
+}
+
+bhr-game-toolbar .middle {
+	bottom: 0;
+	height: fit-content;
+	margin-bottom: auto !important;
+	margin-top: auto !important;
+	max-height: 100vh;
+	top: 0;
+}
+
+bhr-game-toolbar .island {
+	margin: .75vmin;
+	transition: scale 90ms ease-out;
+}
+
+bhr-game-toolbar .island.scale:hover {
+	scale: 1.075;
+	transition: scale 90ms ease-out;
+}
+
+bhr-game-toolbar button {
+	background-color: transparent;
+	border: none;
+	color: var(--text-color);
+	padding: .25rem 1rem;
+}
+
+bhr-game-toolbar .toolbar-item {
+	-webkit-font-smoothing: antialiased;
+	-webkit-text-stroke-width: thin;
+	-webkit-user-select: none;
+	align-items: center;
+	aspect-ratio: 1;
+	background-color: transparent;
+	border: none;
+	box-sizing: content-box;
+	color: var(--text-color);
+	display: flex;
+	font-size: .75rem;
+	height: 1rem;
+	justify-content: center;
+	line-height: 1rem;
+	margin: 0;
+	max-height: 2vh;
+	outline: none;
+	padding: 0.5rem;
+	pointer-events: all;
+	position: relative;
+	text-align: center;
+	user-select: none;
+}
+
+bhr-game-toolbar .toolbar-item:is(.backtrack, .camera, .fullscreen, .line, .playpause, .rewind)::before { background-color: var(--text-color) }
+bhr-game-toolbar .editor-tools .toolbar-item::before { background-color: transparent }
+
+bhr-game-toolbar button:hover,
+bhr-game-toolbar .toolbar-item:hover,
+bhr-game-toolbar .toolbar-item:has(> input:checked):not(.playpause):hover {
+	background-color: hsla(0, 0%, calc(50% - 40% * var(--brightness-multiplier)), 0.8);
+	transition: all 40ms;
+}
+
+bhr-game-toolbar .toolbar-item:has(> input:checked):not(.playpause) { background-color: hsla(0, 0%, calc(50% - 40% * var(--brightness-multiplier)), 0.7) }
+bhr-game-toolbar .toolbar-item::before { transition: all 200ms }
+bhr-game-toolbar .toolbar-item>:not(input:first-child) {
+	display: block;
+	pointer-events: none;
+	transition: all 200ms;
+}
+
+:has(.powerups>input[name="tool"]:not(:checked)) #powerups { display: none }
+:has(.powerups>input[name="tool"]:checked) #tool-settings { display: none }
+
+.toolbar-item.disabled { opacity: .5 }
+.toolbar-item.disabled:hover {
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.playpause::before {
+	/* content: "▶"; */
+	clip-path: polygon(
+		10% 10%,
+		50% 30%,
+		50% 70%,
+		50% 70%,
+		50% 30%,
+		90% 50%,
+		90% 50%,
+		10% 90%
+	);
+}
+
+.playpause:has(> :checked)::before {
+	clip-path: polygon(
+		10% 10%,
+		40% 10%,
+		40% 90%,
+		60% 90%,
+		60% 10%,
+		90% 10%,
+		90% 90%,
+		10% 90%
+	);
+}
+
+.backtrack::before {
+	clip-path: polygon(
+		15% 10%,
+		25% 10%,
+		25% 50%,
+		85% 10%,
+		85% 90%,
+		25% 50%,
+		25% 90%,
+		15% 90%
+	);
+}
+
+.rewind::before {
+	clip-path: polygon(
+		0 10%,
+		15% 10%,
+		15% 50%,
+
+		/* arrow left midway end */
+		60% 10%,
+		60% 50%,
+
+		/* arrow left midway arrow left*/
+		100% 10%,
+		100% 90%,
+		50% 50%,
+		60% 50%,
+
+		60% 90%,
+		15% 50%,
+		15% 90%,
+		0 90%
+	);
+}
+
+.wheel:active>svg { animation: rotate 1s ease }
+.scenery { color: hsl(0, 0%, 50%) !important }
+.scenery:not(.brush)::before { background-color: hsl(0, 0%, 50%) !important }
+
+.toolbar-item::before,
+.powerup.triangle::after,
+.grid::after {
+	content: "";
+	inset: .5rem;
+	position: absolute;
+}
+
+.line::before {
+	border-radius: 4px;
+	clip-path: polygon(90% 0,
+			0 90%,
+			10% 100%,
+			100% 10%);
+}
+
+.eraser::before {
+	clip-path: circle(45%);
+	background-color: #ffb6c1;
+}
+
+.camera::before {
+	clip-path: polygon(50% 0,
+			30% 25%,
+			45% 25%,
+			45% 45%,
+			25% 45%,
+			25% 30%,
+			0 50%,
+			25% 70%,
+			25% 55%,
+			45% 55%,
+			45% 75%,
+			30% 75%,
+			50% 100%,
+			70% 75%,
+			55% 75%,
+			55% 55%,
+			75% 55%,
+			75% 70%,
+			100% 50%,
+			75% 30%,
+			75% 45%,
+			55% 45%,
+			55% 25%,
+			70% 25%,
+			50% 0);
+}
+
+.grid::before {
+	background-color: hsl(0, 0%, 50%);
+	border-radius: 20%;
+	clip-path: polygon(55% 45%,
+			55% 5%,
+			45% 5%,
+			45% 45%,
+			55% 45%,
+			95% 45%,
+			95% 55%,
+			55% 55%,
+			55% 95%,
+			45% 95%,
+			45% 55%,
+			5% 55%,
+			5% 45%);
+}
+
+.grid::after {
+	background-color: hsl(0, 0%, 50%);
+	border-radius: 20%;
+	clip-path: polygon(30% 80%,
+			30% 5%,
+			20% 5%,
+
+			20% 20%,
+			5% 20%,
+			5% 30%,
+			20% 30%,
+
+			/* MIDDLE HORIZONTAL
+        20% 45%,
+        0 45%,
+        0 55%,
+        20% 55%,
+        END MIDDLE HORIZONTAL */
+
+			20% 70%,
+			5% 70%,
+			5% 80%,
+			20% 80%,
+
+			20% 95%,
+			30% 95%,
+			30% 80%,
+
+			70% 80%,
+			70% 95%,
+			80% 95%,
+			80% 80%,
+
+			95% 80%,
+			95% 70%,
+			80% 70%,
+
+			80% 30%,
+			95% 30%,
+			95% 20%,
+			80% 20%,
+
+			80% 5%,
+			70% 5%,
+
+			70% 70%,
+			30% 70%,
+
+			30% 20%,
+			70% 20%,
+			70% 30%,
+			30% 30%,
+
+			30% 70%);
+}
+
+.powerup:not(.triangle)::before {
+	--text-shadow-color: var(--text-color);
+	border: 4px solid var(--text-color);
+	border-radius: 50%;
+	box-sizing: border-box;
+	clip-path: circle(30%);
+	text-shadow: -1px -1px 0 var(--text-shadow-color), 1px -1px 0 var(--text-shadow-color), -1px 1px 0 var(--text-shadow-color), 1px 1px 0 var(--text-shadow-color);
+}
+
+.powerup.target::before { background-color: #ff0 }
+.powerup.checkpoint::before { background-color: #00f }
+.powerup.triangle::before {
+	background-color: var(--text-color);
+	clip-path: polygon(15% 25%,
+			85% 50%,
+			15% 75%,
+			15% 25%);
+}
+
+.powerup.triangle::after {
+	clip-path: polygon(25% 35%,
+			60% 50%,
+			25% 65%,
+			25% 35%);
+}
+
+.powerup.triangle.boost::after { background-color: #ff0 }
+.powerup.triangle.gravity::after { background-color: #0f0 }
+.powerup.bomb::before { background-color: #f00 }
+.powerup.slowmo::before { background-color: #eee }
+.powerup.antigravity::before { background-color: #0ff }
+.powerup.teleport::before { background-color: #f0f }
+.fullscreen::before {
+	/* content: "⛶"; */
+	clip-path: polygon(0 40%,
+			0 0,
+			40% 0,
+			40% 20%,
+			20% 20%,
+			20% 40%,
+			0 40%,
+			0 100%,
+			40% 100%,
+			40% 80%,
+			20% 80%,
+			20% 60%,
+			0 60%,
+			0 100%,
+			100% 100%,
+			100% 60%,
+			80% 60%,
+			80% 80%,
+			60% 80%,
+			60% 100%,
+			100% 100%,
+			100% 0,
+			60% 0,
+			60% 20%,
+			80% 20%,
+			80% 40%,
+			100% 40%,
+			100% 100%,
+			0 100%);
+}
+
+:fullscreen .fullscreen::before {
+	clip-path: polygon(0 40%,
+			40% 40%,
+			40% 0,
+			20% 0,
+			20% 20%,
+			0 20%,
+			0 60%,
+			40% 60%,
+			40% 100%,
+			20% 100%,
+			20% 80%,
+			0 80%,
+			0 100%,
+			60% 100%,
+			60% 60%,
+			100% 60%,
+			100% 80%,
+			80% 80%,
+			80% 100%,
+			60% 100%,
+			100% 100%,
+			100% 40%,
+			60% 40%,
+			60% 0,
+			80% 0,
+			80% 20%,
+			100% 20%,
+			100% 40%,
+			100% 100%,
+			0 100%);
+}
+
+.increment::before {
+	clip-path: polygon(40% 0,
+			40% 40%,
+			0 40%,
+			0 60%,
+			40% 60%,
+			40% 100%,
+			60% 100%,
+			60% 60%,
+			100% 60%,
+			100% 40%,
+			60% 40%,
+			60% 0);
+}
+
+.decrement::before {
+	clip-path: polygon(0 40%,
+			100% 40%,
+			100% 60%,
+			0 60%);
+}

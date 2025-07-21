@@ -1,0 +1,388 @@
+@keyframes rotate {
+	to { transform: rotate(360deg) }
+}
+
+:root { scrollbar-color: hsl(0 0% 50% / 15%) transparent }
+:root:hover { scrollbar-color: hsl(0 0% 50% / 30%) transparent }
+
+html {
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+body { margin: 0 }
+
+canvas#view {
+	background-color: var(--background-color);
+	height: 100vh;
+	min-height: 240px;
+	touch-action: none;
+	width: 100vw;
+}
+
+:fullscreen canvas#view {
+	height: 100% !important;
+	max-height: none;
+	max-width: none;
+	width: 100% !important;
+}
+
+div#game-container {
+	display: block;
+	width: fit-content;
+	position: relative;
+	margin: auto;
+	max-height: 100vh;
+	max-width: 100vw;
+	overflow: hidden;
+}
+
+div#game-container .ripple {
+	overflow: hidden;
+	position: relative;
+}
+
+div#game-container .ripple::before {
+	aspect-ratio: 1;
+	background-color: hsl(0, 0%, 50%);
+	border-radius: 50%;
+	content: "";
+	inset: 0;
+	margin: auto;
+	opacity: 0;
+	position: absolute;
+	scale: 2;
+	transition: opacity 1s, scale 800ms ease-out;
+}
+
+div#game-container .ripple:active::before {
+	opacity: 0.5;
+	scale: 0;
+	transition: 0s;
+}
+
+div#game-container .replay-progress {
+	border: none;
+	bottom: 0;
+	height: 4px;
+	left: 0;
+	position: absolute;
+	right: 0;
+	transition: height 100ms ease 0s;
+	width: auto;
+}
+
+div#game-container .replay-progress:hover {
+	cursor: pointer;
+	filter: brightness(1.25);
+	height: 6px;
+}
+
+div#game-container .replay-progress::-webkit-progress-value {
+	background: var(--border-color);
+}
+
+div#game-container .replay-progress::-webkit-progress-bar {
+	background: var(--background-color);
+}
+
+.bhr-dialog {
+	backdrop-filter: blur(1rem) brightness(0.75);
+	background-color: transparent;
+	border: none;
+	border-radius: 0.5rem;
+	box-shadow: hsl(0deg 0% 0% / 50%) 0px 0px 4px;
+}
+
+.input-container {
+	position: relative;
+}
+
+.input-container:has(> :placeholder-shown)> :last-child {
+	visibility: hidden;
+}
+
+.input-container > .char-counter {
+	-webkit-user-select: none;
+	bottom: 0;
+	color: hsl(0deg 0% 50% / 85%);
+	content: attr(content);
+	font-family: monospace;
+	padding: .5rem;
+	position: absolute;
+	pointer-events: none;
+	right: 0;
+	user-select: none;
+}
+
+.input-container > .char-counter::after {
+	content: "k";
+}
+
+.toast-container {
+	border-radius: 4px;
+	bottom: 0;
+	color: var(--text-color);
+	display: grid;
+	gap: .25rem;
+	margin: .75vmin;
+	max-height: 50vmin;
+	max-width: 50vmin;
+	overflow: hidden;
+	position: absolute;
+	right: 0;
+	scroll-snap-align: end;
+}
+
+.toast {
+	backdrop-filter: blur(4px) brightness(.5);
+	background-color: hsl(0deg 0% 50% / calc(40% - 20% * var(--brightness-multiplier)));
+	border-radius: 4px;
+	box-sizing: border-box;
+	color: var(--text-color);
+	font-size: smaller;
+	padding: .75rem;
+	pointer-events: all;
+	width: 100%;
+}
+
+.bhr-game-overlay {
+	align-items: center;
+	backdrop-filter: blur(.75rem) brightness(calc(.75 - .1 * var(--brightness-multiplier)));
+	display: flex;
+	flex-direction: column;
+	inset: 0;
+	padding: 1rem;
+	pointer-events: all;
+	position: absolute;
+	visibility: hidden;
+}
+
+.bhr-game-overlay nav {
+	display: grid;
+	font-family: fantasy;
+	font-size: clamp(8px, 2cqw, 1rem);
+	grid-gap: .25rem;
+	grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+	justify-content: center;
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 50%;
+	width: 100vmin;
+}
+
+.bhr-game-overlay nav>label {
+	-webkit-user-select: none;
+	/* background-color: hsl(0deg 0% 50% / 8%); */
+	/* border: none; */
+	/* border: 1px solid hsl(0deg 0% 50% / 8%); */
+	border: 1px solid hsl(0deg 0% 50% / calc(50% - 40% * var(--brightness-multiplier)));
+	border-radius: .25rem;
+	box-sizing: border-box;
+	opacity: .8;
+	padding: .25rem .5rem;
+	text-align: center;
+	transition: background-color 80ms;
+	user-select: none;
+}
+
+.bhr-game-overlay nav>label:hover {
+	/* background-color: hsl(0deg 0% 50% / 20%); */
+	background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
+	/* cursor: pointer; */
+}
+
+.bhr-game-overlay:has(input[type="radio"]#track:checked) nav>label[for="track"],
+.bhr-game-overlay:has(input[type="radio"]#ghost:checked) nav>label[for="ghost"],
+.bhr-game-overlay:has(input[type="radio"]#recorder-toggle:checked) nav>label[for="recorder-toggle"],
+.bhr-game-overlay:has(input[type="radio"]#settings:checked) nav>label[for="settings"] {
+	/* background-color: hsl(0deg 0% 40% / 40%); */
+	background-color: hsl(0deg 0% calc(30% - 15% * var(--brightness-multiplier)) / 50%);
+	opacity: 1;
+}
+
+.bhr-game-overlay>section {
+	align-items: center;
+	display: none;
+	flex-direction: column;
+	gap: .125rem;
+	overflow: auto;
+	padding: 1rem;
+	/* margin: auto; */
+	margin: 1rem;
+	margin-bottom: auto;
+	max-width: 80%;
+	min-height: 50%;
+}
+
+.bhr-game-overlay section[title]::before {
+	content: attr(title);
+	display: block;
+	font-weight: bold;
+	margin-bottom: .5rem;
+}
+
+.bhr-game-overlay input:is([type="number"],[type="text"]) {
+	backdrop-filter: brightness(0.5);
+	background-color: transparent;
+	border: none;
+	border-radius: .25rem;
+	color: var(--text-color);
+	outline: none;
+	padding: .25rem .5rem;
+}
+
+/* section:has(> input:is([type="checkbox"], [type="radio"]):not(:checked)) {
+    display: none !important;
+} */
+
+:has(> :checked) {
+	display: flex !important;
+	/* revert-layer !important */
+	visibility: visible !important;
+}
+
+.bhr-game-overlay label:has(> input) {
+	-webkit-user-select: none;
+	align-items: center;
+	border-radius: .25rem;
+	box-sizing: border-box;
+	display: flex;
+	font-size: smaller;
+	/* justify-content: center; */
+	justify-content: space-between;
+	user-select: none;
+	width: -webkit-fill-available;
+}
+
+.bhr-game-overlay label > input:nth-child(1) {
+	margin-left: 1rem;
+}
+
+.bhr-game-overlay button,
+.toast button {
+	-webkit-user-select: none;
+	border: none;
+	border-radius: 4px;
+	color: var(--text-color);
+	transition: all 40ms;
+	user-select: none;
+}
+
+.bhr-game-overlay button,
+.bhr-game-overlay label:has(> input) {
+	/* background-color: hsl(0deg 0% 40% / 60%); */
+	background-color: hsl(0deg 0% calc(40% - 20% * var(--brightness-multiplier)) / 50%);
+	padding: 0.5rem 1rem;
+}
+
+.toast button {
+	background-color: transparent;
+	padding: 0.25rem .5rem;
+}
+
+.bhr-game-overlay button:hover {
+	filter: brightness(calc(1 + .2 * var(--brightness-multiplier)));
+}
+
+.toast button:hover {
+	backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier)));
+}
+
+.disabled,
+:disabled,
+:placeholder-shown + * > .hidden-placeholder,
+.input-container:has(> :placeholder-shown) + * > .hidden-placeholder {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.timebar:not(:hover)::-webkit-slider-thumb {
+	visibility: hidden;
+}
+
+textarea {
+	/* background-color: hsl(0deg 0% 50% / 20%); */
+	background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
+	border: none;
+	border-radius: 5px;
+	color: var(--text-color);
+	max-width: -webkit-fill-available;
+	outline: none;
+	padding: 5px;
+	resize: none;
+}
+
+.bhr-game-overlay>section:has(> #settings)>section {
+	display: grid;
+	grid-gap: 0.125rem;
+	width: -webkit-fill-available;
+}
+
+window-frame {
+	background-color: var(--background-color);
+	color: #80808080;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	position: relative;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-app-region: drag;
+}
+
+window-frame label {
+	font-size: 10px;
+	padding: 0 4px;
+	position: relative;
+	-webkit-app-region: no-drag;
+}
+
+window-frame label:hover {
+	color: #808080ad;
+}
+
+window-frame div[data-position="left"]>* {
+	max-height: 1.25rem;
+	padding: 0.25rem;
+	vertical-align: middle;
+}
+
+window-frame div[data-position="right"] {
+	display: flex;
+	-webkit-app-region: no-drag;
+}
+
+window-frame button {
+	aspect-ratio: auto;
+	background-color: transparent;
+	border-radius: 0;
+	height: -webkit-fill-available;
+	padding: 0.25rem 1rem;
+	position: relative;
+	vertical-align: middle;
+}
+
+window-frame button:hover {
+	background-color: #80808030;
+	color: var(--text-color);
+}
+
+window-frame button:hover:active {
+	background-color: #80808050;
+}
+
+window-frame button#maximize[title="Restore"]::before {
+	content: "▢";
+	position: absolute;
+	top: 6px;
+	left: 14px;
+}
+
+window-frame button#close:hover {
+	background-color: #ff0000dd;
+}
+
+window-frame button#close:hover:active {
+	background-color: #ff000090;
+}

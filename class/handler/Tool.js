@@ -16,7 +16,7 @@ export default class {
 	old = 'camera';
 	selected = 'camera';
 	constructor(parent) {
-		Object.defineProperty(this, 'scene', { value: parent, writable: true });
+		this.scene = parent;
 		this.cache.set('brush', new Brush(this));
 		this.cache.set('camera', new Camera(this));
 		this.cache.set('circle', new Circle(this));
@@ -43,38 +43,8 @@ export default class {
 		return this.cache.get(this.selected);
 	}
 
-	_handleEvent(event) {
-		if (this.scene.track.processing && event.type !== 'pointermove') return;
-		switch(event.type.toLowerCase()) {
-		case 'pointerdown':
-			this.currentTool.press(event);
-			break;
-		case 'pointermove':
-			this.currentTool.stroke(event);
-			break;
-		case 'pointerup':
-			this.currentTool.clip(event);
-			break;
-		case 'wheel':
-			this.currentTool.scroll(event)
-		}
-	}
-
-	draw(ctx) {
-		this.currentTool.draw(ctx);
-		if (this.scene.parent.mouse.active && /^(brush|circle|curve|ellipse|line|rectangle|select)$/i.test(this.selected)) {
-			let position = this.scene.parent.mouse.rawPosition;
-			ctx.beginPath();
-			ctx.moveTo(position.x - 10 * window.devicePixelRatio, position.y);
-			ctx.lineTo(position.x + 10 * window.devicePixelRatio, position.y);
-			ctx.moveTo(position.x, position.y + 10 * window.devicePixelRatio);
-			ctx.lineTo(position.x, position.y - 10 * window.devicePixelRatio);
-			ctx.save();
-			this.scene.track.processing && (ctx.globalAlpha /= 2);
-			ctx.lineWidth = 2 * window.devicePixelRatio;
-			ctx.stroke();
-			ctx.restore()
-		}
+	get ctx() {
+		return this.scene.parent.ctx;
 	}
 
 	setTool(name, style = null) {
@@ -85,11 +55,53 @@ export default class {
 		}
 
 		this.currentTool.update();
+		let powerups = document.querySelector('#powerups');
+		powerups !== null && powerups.style.setProperty('display', /^(antigravity|bo(mb|ost)|checkpoint|g(oal|ravity)|slow-mo|teleporter)$/i.test(this.selected) ? 'contents' : 'none');
+
+		let settings = document.querySelector('bhr-game-toolbar #tool-settings');
+		settings !== null && (settings.style.setProperty('display', /^(brush|camera|circle|eraser)$/i.test(this.selected) ? 'contents' : 'none'),
+		settings = settings.querySelector('div[data-id=eraser]'),
+		settings !== null && settings.style.setProperty('display', this.selected == 'eraser' ? 'contents' : 'none'));
+
+		let tool = document.querySelector(`.toolbar-item${style ? '.scenery' : ''}.${name} > input[type=radio]`);
+		tool !== null && (tool.checked = true);
+
 		this.scene.parent.canvas.style.setProperty('cursor', name == 'camera' ? 'move' : 'none');
-		this.scene.parent.emit('currentToolChange', this.currentTool)
+	}
+
+	scroll(event) {
+		this.currentTool.scroll(event);
+	}
+
+	press(event) {
+		this.currentTool.press(event);
+	}
+
+	stroke(event) {
+		this.currentTool.stroke(event);
+	}
+
+	clip(event) {
+		this.currentTool.clip(event);
 	}
 
 	update() {
 		this.currentTool.update();
+	}
+
+	draw(ctx) {
+		this.currentTool.draw(ctx);
+		if (/^(brush|circle|curve|ellipse|line|rectangle|select)$/i.test(this.selected)) {
+			let position = this.scene.parent.mouse.rawPosition;
+			ctx.beginPath()
+			ctx.moveTo(position.x - 10 * window.devicePixelRatio, position.y)
+			ctx.lineTo(position.x + 10 * window.devicePixelRatio, position.y)
+			ctx.moveTo(position.x, position.y + 10 * window.devicePixelRatio)
+			ctx.lineTo(position.x, position.y - 10 * window.devicePixelRatio)
+			ctx.save()
+			ctx.lineWidth = 2 * window.devicePixelRatio
+			ctx.stroke()
+			ctx.restore();
+		}
 	}
 }

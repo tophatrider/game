@@ -1,13 +1,12 @@
-import Collectable from "./Consumable.js";
+import Collectable from "./Collectable.js";
 
 export default class Checkpoint extends Collectable {
+	type = 'C';
+	static color = '#00f';
 	activate(part) {
 		super.activate(part);
-		if (part.player.ghost) return;
-		part.player.pendingConsumables |= 1
-		// part.player.discreteEvents.add('checkpointReached')
+		if (part.parent.parent.ghost) return;
+		part.parent.parent.pendingConsumables |= 1;
+		// part.parent.parent.discreteEvents.add('checkpointReached');
 	}
-
-	static color = '#00f';
-	static type = 'C';
 }

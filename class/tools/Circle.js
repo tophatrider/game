@@ -34,7 +34,7 @@ export default class extends Line {
 
 		points.push(points[0]);
 		for (let i = 0; i < points.length - 1; i++) {
-			this.lines.push(this.scene.track.addLine(points[i], points[i + 1], this.scenery));
+			this.lines.push(this.scene.addLine(points[i], points[i + 1], this.scenery));
 		}
 	}
 

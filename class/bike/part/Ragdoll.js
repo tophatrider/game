@@ -2,65 +2,65 @@ import Spring from "../physics/Spring.js";
 import Mass from "./Mass.js";
 
 export default class {
-	points = [];
-	joints = [];
+	points = [
+		this.head = new Mass(this),
+		this.hip = new Mass(this),
+		this.elbow = new Mass(this),
+		this.shadowElbow = new Mass(this),
+		this.hand = new Mass(this),
+		this.shadowHand = new Mass(this),
+		this.knee = new Mass(this),
+		this.shadowKnee = new Mass(this),
+		this.foot = new Mass(this),
+		this.shadowFoot = new Mass(this)
+	]
+
+	joints = [
+		new Spring(this.head, this.hip),
+		new Spring(this.head, this.elbow),
+		new Spring(this.elbow, this.hand),
+		new Spring(this.head, this.shadowElbow),
+		new Spring(this.shadowElbow, this.shadowHand),
+		new Spring(this.hip, this.knee),
+		new Spring(this.knee, this.foot),
+		new Spring(this.hip, this.shadowKnee),
+		new Spring(this.shadowKnee, this.shadowFoot)
+	]
+
 	constructor(parent, stickman) {
-		Object.defineProperty(this, 'parent', { value: parent || null });
-		this.points.push(
-			this.head = new Mass(this.parent),
-			this.hip = new Mass(this.parent),
-			this.elbow = new Mass(this.parent),
-			this.shadowElbow = new Mass(this.parent),
-			this.hand = new Mass(this.parent),
-			this.shadowHand = new Mass(this.parent),
-			this.knee = new Mass(this.parent),
-			this.shadowKnee = new Mass(this.parent),
-			this.foot = new Mass(this.parent),
-			this.shadowFoot = new Mass(this.parent)
-		);
+		this.parent = parent;
 		for (const point of this.points) {
 			point.size = 3;
 			point.friction = 0.05;
 		}
 
 		this.head.size = this.hip.size = 8;
-		this.joints.push(
-			new Spring(this.head, this.hip),
-			new Spring(this.head, this.elbow),
-			new Spring(this.elbow, this.hand),
-			new Spring(this.head, this.shadowElbow),
-			new Spring(this.shadowElbow, this.shadowHand),
-			new Spring(this.hip, this.knee),
-			new Spring(this.knee, this.foot),
-			new Spring(this.hip, this.shadowKnee),
-			new Spring(this.shadowKnee, this.shadowFoot)
-		);
 		for (const joint of this.joints) {
 			joint.springConstant = 0.4;
 			joint.dampConstant = 0.7;
 		}
 
-		this.setPosition(stickman)
+		this.setPosition(stickman);
 	}
 
 	draw(ctx) {
-		const head = this.head.displayPosition.toPixel();
-		// const sternum = this.sternum.displayPosition.toPixel();
-		const elbow = this.elbow.displayPosition.toPixel();
-		const hand = this.hand.displayPosition.toPixel();
-		const shadowElbow = this.shadowElbow.displayPosition.toPixel();
-		const shadowHand = this.shadowHand.displayPosition.toPixel();
-		const knee = this.knee.displayPosition.toPixel();
-		const foot = this.foot.displayPosition.toPixel();
-		const shadowKnee = this.shadowKnee.displayPosition.toPixel();
-		const shadowFoot = this.shadowFoot.displayPosition.toPixel();
-		const hip = this.hip.displayPosition.toPixel();
-		const sternum = head.difference(hand.difference(hip).scale(0.08)).difference(head.difference(hip).scale(0.2));
+		const head = this.head.pos.toPixel()
+		// 	, sternum = this.sternum.pos.toPixel()
+			, elbow = this.elbow.pos.toPixel()
+			, hand = this.hand.pos.toPixel()
+			, shadowElbow = this.shadowElbow.pos.toPixel()
+			, shadowHand = this.shadowHand.pos.toPixel()
+			, knee = this.knee.pos.toPixel()
+			, foot = this.foot.pos.toPixel()
+			, shadowKnee = this.shadowKnee.pos.toPixel()
+			, shadowFoot = this.shadowFoot.pos.toPixel()
+			, hip = this.hip.pos.toPixel()
+			, sternum = head.difference(hand.difference(hip).scale(0.08)).difference(head.difference(hip).scale(0.2));
 
 		// ctx.save();
 		this.parent.ghost && (ctx.globalAlpha /= 2,
-		this.parent.scene.camera.focusPoint && this.parent.scene.camera.focusPoint !== this.parent.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.parent.hitbox.displayPosition.distanceTo(this.parent.scene.camera.focusPoint.displayPosition) / (this.parent.hitbox.size / 2) ** 2))));
-		ctx.lineWidth = 6 * this.parent.scene.camera.zoom;
+		this.parent.scene.cameraFocus && this.parent.scene.cameraFocus !== this.parent.vehicle.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.parent.vehicle.hitbox.pos.distanceTo(this.parent.scene.cameraFocus.pos) / (this.parent.vehicle.hitbox.size / 2) ** 2))));
+		ctx.lineWidth = 6 * this.parent.scene.zoom;
 
 		ctx.beginPath()
 		this.parent.dead && (ctx.moveTo(sternum.x, sternum.y),
@@ -70,7 +70,7 @@ export default class {
 		ctx.lineTo(shadowKnee.x, shadowKnee.y)
 		ctx.lineTo(shadowFoot.x, shadowFoot.y)
 		ctx.save();
-		ctx.strokeStyle = this.parent.scene.parent.physicsLineColor + '80';
+		ctx.strokeStyle = /^dark$/i.test(this.parent.scene.parent.settings.theme) ? '#fbfbfb80' : /^midnight$/i.test(this.parent.scene.parent.settings.theme) ? '#cccccc80' : 'rgba(0,0,0,0.5)';
 		ctx.stroke();
 		ctx.restore();
 
@@ -84,7 +84,7 @@ export default class {
 		ctx.lineTo(foot.x, foot.y)
 		ctx.stroke();
 
-		ctx.lineWidth = 8 * this.parent.scene.camera.zoom;
+		ctx.lineWidth = 8 * this.parent.scene.zoom;
 
 		ctx.beginPath()
 		ctx.moveTo(hip.x, hip.y)
@@ -92,9 +92,9 @@ export default class {
 		ctx.stroke();
 
 		ctx.beginPath()
-		ctx.lineWidth = 2 * this.parent.scene.camera.zoom;
-		// this.head.size * (this.parent.scene.camera.zoom / 2.8)
-		ctx.arc(head.x, head.y, 5 * this.parent.scene.camera.zoom, 0, 2 * Math.PI),
+		ctx.lineWidth = 2 * this.parent.scene.zoom;
+		// this.head.size * (this.parent.scene.zoom / 2.8)
+		ctx.arc(head.x, head.y, 5 * this.parent.scene.zoom, 0, 2 * Math.PI),
 		ctx.stroke()
 
 		ctx.globalAlpha = 1;
@@ -102,33 +102,32 @@ export default class {
 	}
 
 	fixedUpdate() {
-		for (const joint of this.joints) {
+		for (const joint of this.joints)
 			joint.fixedUpdate();
-		}
-
-		for (const point of this.points) {
-			point.fixedUpdate()
-		}
+		for (const point of this.points)
+			point.fixedUpdate();
+		// for (const joint of this.joints)
+		// 	joint.fixedUpdate();
+		// for (const point of this.points)
+		// 	point.fixedUpdate();
 	}
 
-	update(progress) {
-		for (const point of this.points) {
-			point.update(progress)
-		}
+	update() {
+		for (const point of this.points)
+			point.update(...arguments);
 	}
 
-	nativeUpdate() {
-		this.fixedUpdate();
-		if (!this.parent.slow || this.parent.slowParity === 0) {
-			this.fixedUpdate();
-		}
+	lateUpdate() {
+		for (const point of this.points)
+			point.lateUpdate(...arguments);
 	}
 
 	setPosition(stickman) {
 		for (const part in stickman) {
-			if (!this.hasOwnProperty(part)) continue;
-			this[part].position.set(stickman[part]);
-			this[part].displayPosition.set(this[part].position);
+			if (part in this) {
+				this[part].real.set(stickman[part]);
+				this[part].pos.set(this[part].real);
+			}
 		}
 	}
 
@@ -149,16 +148,12 @@ export default class {
 
 		let upper = [this.head, this.elbow, this.shadowElbow, this.hand, this.shadowHand];
 		let lower = [this.hip, this.knee, this.shadowKnee, this.foot, this.shadowFoot];
-		for (const point of upper) {
-			point.old = point.position.difference(a);
-		}
-
-		for (const point of lower) {
-			point.old = point.position.difference(b);
-		}
-
+		for (const point of upper)
+			point.old.set(point.real.difference(a));
+		for (const point of lower)
+			point.old.set(point.real.difference(b));
 		for (const point of this.points) {
-			point.velocity.set(point.position.difference(point.old));
+			point.velocity.set(point.real.difference(point.old));
 			point.velocity.x += Math.random() - Math.random();
 			point.velocity.y += Math.random() - Math.random();
 		}
@@ -168,7 +163,7 @@ export default class {
 		const stickman = {};
 		for (const part in this) {
 			if (part instanceof Mass) {
-				stickman[part] = this[part].position.clone();
+				stickman[part] = this[part].real.clone();
 			}
 		}
 

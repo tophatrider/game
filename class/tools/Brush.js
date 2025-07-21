@@ -17,7 +17,7 @@ export default class extends Line {
 
 		this.anchor ??= this.mouse.old.clone();
 		if (this.anchor.distanceTo(this.mouse.position) >= this.length) {
-			this.scene.track.addLine(this.anchor, this.mouse.position, this.scenery);
+			this.scene.addLine(this.anchor, this.mouse.position, this.scenery);
 			this.mouse.old.set(this.mouse.position);
 			this.anchor = null;
 		}

@@ -1,7 +1,7 @@
-import Consumable from "./Consumable.js";
-import Coordinates from "../Coordinates.js";
+import Vector from "../Vector.js";
+import Collectable from "./Collectable.js";
 
-export default class Teleporter extends Consumable {
+export default class Teleporter extends Collectable {
 	alt = null;
 	type = 'W';
 	constructor() {
@@ -10,20 +10,22 @@ export default class Teleporter extends Consumable {
 	}
 
 	createAlt(x, y) {
-		this.alt = new Coordinates(x, y);
+		this.alt = new Vector(x, y);
 	}
 
 	draw(ctx) {
 		super.draw(ctx);
-		this.alt && super.draw(ctx, this.alt.toPixel())
+		if (this.alt) {
+			super.draw(ctx, this.alt.toPixel());
+		}
 	}
 
 	collide(part) {
 		if (this.alt === null) return;
-		if (part.position.distanceToSquared(this.alt) < 500 && !part.player.dead && !part.player.consumablesUsed.has(this.id)) {
-			part.player.consumablesUsed.add(this.id);
+		if (part.real.distanceToSquared(this.alt) < 500 && !part.parent.parent.dead && !part.parent.parent.itemsCollected.has(this.id)) {
+			part.parent.parent.itemsCollected.add(this.id);
 			this.activate(part, true);
-			return
+			return;
 		}
 
 		super.collide(part);
@@ -31,28 +33,30 @@ export default class Teleporter extends Consumable {
 
 	activate(part, alt = false) {
 		if (alt) {
-			return part.parent.move(this.position.x - this.alt.x, this.position.y - this.alt.y)
+			part.parent.move(this.position.x - this.alt.x, this.position.y - this.alt.y);
+			return;
 		}
 
-		part.parent.move(this.alt.x - this.position.x, this.alt.y - this.position.y)
+		part.parent.move(this.alt.x - this.position.x, this.alt.y - this.position.y);
 	}
 
 	erase(vector) {
-		let erase = vector.distanceTo(this.alt) < this.scene.toolHandler.currentTool.size + this.size || super.erase(vector);
-		erase && this.scene.grid.removeItem(this);
-		return false
+		if (vector.distanceTo(this.alt) < this.scene.toolHandler.currentTool.size + this.size) {
+			return this.remove();
+		}
+
+		return super.erase(vector);
 	}
 
-	toJSON() {
-		return Object.assign(super.toJSON(), {
-			alt: this.alt.toJSON()
-		})
+	remove() {
+		super.remove();
+		this.scene.remove(this.alt);
+		return this;
 	}
 
 	toString() {
-		return this.type + ' ' + this.position.toString() + ' ' + this.alt.toString()
+		return this.type + ' ' + this.position.toString() + ' ' + this.alt.toString();
 	}
 
 	static color = '#f0f';
-	static type = 'W';
 }

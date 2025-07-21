@@ -11,19 +11,19 @@ export default class extends Powerup {
 	}
 
 	draw(ctx) {
-		if (this.scene.camera.lock) {
+		if (this.scene.cameraLock) {
 			let position = this.mouse.position.toPixel();
 			let margin = 50;
 			let dirX = (position.x > this.scene.parent.canvas.width - margin) - (position.x < margin);
 			if (dirX !== 0) {
-				this.scene.camera.x += 4 / this.scene.camera.zoom * dirX;
-				this.mouse.position.x += 4 / this.scene.camera.zoom * dirX;
+				this.scene.camera.x += 4 / this.scene.zoom * dirX;
+				this.mouse.position.x += 4 / this.scene.zoom * dirX;
 			}
 
 			let dirY = (position.y > this.scene.parent.canvas.height - margin) - (position.y < margin);
 			if (dirY !== 0) {
-				this.scene.camera.y += 4 / this.scene.camera.zoom * dirY;
-				this.mouse.position.y += 4 / this.scene.camera.zoom * dirY;
+				this.scene.camera.y += 4 / this.scene.zoom * dirY;
+				this.mouse.position.y += 4 / this.scene.zoom * dirY;
 			}
 
 			ctx.beginPath()
@@ -36,16 +36,16 @@ export default class extends Powerup {
 			ctx.restore();
 		}
 
-		super.draw(ctx)
+		super.draw(ctx);
 	}
 
 	stroke() {
 		super.stroke(...arguments);
-		this.mouse.down && this.powerup.alt.set(this.mouse.old)
+		this.mouse.down && this.powerup.alt.set(this.mouse.old);
 	}
 
 	update() {
 		super.update(...arguments);
-		this.powerup.createAlt(this.mouse.position.x, this.mouse.position.y)
+		this.powerup.createAlt(this.mouse.position.x, this.mouse.position.y);
 	}
 }

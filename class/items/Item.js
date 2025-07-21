@@ -1,47 +1,39 @@
-import Coordinates from "../Coordinates.js";
+import Vector from "../Vector.js";
 
 export default class {
-	sectors = new Set()
+	scene = null;
 	size = 7;
-	type = this.constructor.type;
 	constructor(scene, x, y) {
-		Object.defineProperty(this, 'scene', { value: scene || null });
-		this.position = new Coordinates(x, y)
+		this.scene = scene;
+		this.position = new Vector(x, y);
 	}
 
 	draw(ctx, position = this.position.toPixel()) {
 		ctx.beginPath();
-		ctx.arc(position.x, position.y, this.size * this.scene.camera.zoom, 0, 2 * Math.PI);
-		let fillStyle = ctx.fillStyle;
+		ctx.arc(position.x, position.y, 7 * this.scene.zoom, 0, 2 * Math.PI);
+		ctx.save();
 		ctx.fillStyle = this.constructor.color;
 		ctx.fill();
-		ctx.fillStyle = fillStyle;
-		ctx.stroke()
+		ctx.restore();
+		ctx.stroke();
 	}
 
 	collide(part) {
-		part.position.distanceToSquared(this.position) < 500 && this.activate(part)
+		part.real.distanceToSquared(this.position) < 500 && this.activate(part);
 	}
 
 	erase(vector) {
-		return vector.distanceTo(this.position) < this.scene.toolHandler.currentTool.size + this.size
+		return vector.distanceTo(this.position) < this.scene.toolHandler.currentTool.size + this.size;
 	}
 
 	remove() {
 		this.scene.grid.removeItem(this);
 		this.removed = true;
-		return this
-	}
-
-	toJSON() {
-		return {
-			position: this.position.toJSON(),
-			size: this.size
-		}
+		return this;
 	}
 
 	toString() {
-		return this.constructor.type + ' ' + this.position.toString()
+		return this.type + ' ' + this.position.toString();
 	}
 
 	static clip() {}
@@ -50,7 +42,7 @@ export default class {
 		return;
 		// let position = this.mouse.position.toPixel();
 		ctx.beginPath();
-		ctx.arc(position.x, position.y, 7 * this.scene.camera.zoom, 0, 2 * Math.PI);
+		ctx.arc(position.x, position.y, 7 * this.scene.zoom, 0, 2 * Math.PI);
 		ctx.save();
 		ctx.fillStyle = this.constructor.color;
 		ctx.fill();

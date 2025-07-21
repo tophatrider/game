@@ -1,73 +1,97 @@
 import Bike from "./Bike.js";
-import Coordinates from "../Coordinates.js";
+import Vector from "../Vector.js";
 
 export default class BMX extends Bike {
-	rotationFactor = 6;
-	constructor(parent, { clone } = {}) {
+	constructor(parent) {
 		super(...arguments);
 
+		this.hitbox.size = 14;
 		this.frontWheel.size = 11.7;
 		this.rearWheel.size = 11.7;
 
+		this.hitbox.real.set(new Vector(0, -1));
+		this.hitbox.pos = this.hitbox.real;
+		this.hitbox.old = this.hitbox.real.clone();
+		this.rearWheel.real = new Vector(-21, 38);
+		this.rearWheel.pos = this.rearWheel.real;
+		this.rearWheel.old = this.rearWheel.real.clone();
+		this.frontWheel.real = new Vector(21, 38);
+		this.frontWheel.pos = this.frontWheel.real;
+		this.frontWheel.old = this.frontWheel.real.clone();
+
 		this.rearSpring.lrest = 45;
+		this.rearSpring.leff = 45;
 		this.rearSpring.springConstant = .35;
+		this.rearSpring.dampConstant = .3;
 
 		this.chasse.lrest = 42;
+		this.chasse.leff = 42;
 		this.chasse.springConstant = .35;
+		this.chasse.dampConstant = .3;
 
+		this.frontSpring.lrest = 45;
+		this.frontSpring.leff = 45;
 		this.frontSpring.springConstant = .35;
-		clone || this.reset();
+		this.frontSpring.dampConstant = .3;
+
+		this.rotationFactor = 6;
 	}
 
 	get rider() {
 		const rider = {};
 
-		let t = this.frontWheel.displayPosition.difference(this.rearWheel.displayPosition);
-		let e = new Coordinates(t.y, -t.x).scale(this.dir);
-		let s = new Coordinates(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(6);
+		let t = this.frontWheel.pos.difference(this.rearWheel.pos);
+		let e = new Vector(t.y, -t.x).scale(this.dir);
+		let s = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(6);
 
-		let r = this.parent.hitbox.displayPosition.difference(this.rearWheel.displayPosition).difference(t.scale(0.5));
-		let a = this.rearWheel.displayPosition.sum(t.scale(0.3)).sum(e.scale(0.25));
+		let r = this.hitbox.pos.difference(this.rearWheel.pos).difference(t.scale(0.5));
+		let a = this.rearWheel.pos.sum(t.scale(0.3)).sum(e.scale(0.25));
 
 		rider.head = a.sum(t.scale(0.15)).sum(r.scale(1.05));
-		// rider.head = this.parent.hitbox.displayPosition.difference(t.scale(0.05)).sum(e.scale(0.3));
+		// rider.head = this.hitbox.pos.difference(t.scale(0.05)).sum(e.scale(0.3));
 		rider.sternum /* .head */ = a.sum(t.scale(0.05)).sum(r.scale(0.88));
-		rider.hand = this.rearWheel.displayPosition.sum(t.scale(0.8)).sum(e.scale(0.68));
+		rider.hand = this.rearWheel.pos.sum(t.scale(0.8)).sum(e.scale(0.68));
 		rider.shadowHand = rider.hand.clone();
 
 		let i = rider.sternum.difference(rider.hand);
-		i = new Coordinates(i.y, -i.x).scale(this.dir);
+		i = new Vector(i.y, -i.x).scale(this.dir);
 
 		rider.elbow = i.scale(130 / i.lengthSquared()).sum(rider.sternum.difference(rider.hand).scale(.4)).sum(rider.hand);
 		rider.shadowElbow = rider.elbow.clone();
 		rider.hip = a.difference(t.scale(0.1)).sum(r.scale(0.3));
-		rider.foot = this.rearWheel.displayPosition.sum(t.scale(0.4)).sum(e.scale(0.05)).sum(s);
+		rider.foot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).sum(s);
 
 		i = rider.hip.difference(rider.foot);
-		i = new Coordinates(-i.y, i.x).scale(this.dir);
+		i = new Vector(-i.y, i.x).scale(this.dir);
 
 		rider.knee = rider.hip.sum(rider.foot).scale(0.5).sum(i.scale(200 / i.lengthSquared()));
-		rider.shadowFoot = this.rearWheel.displayPosition.sum(t.scale(0.4)).sum(e.scale(0.05)).difference(s);
+		rider.shadowFoot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).difference(s);
 
 		i = rider.hip.difference(rider.shadowFoot);
-		i = new Coordinates(-i.y, i.x).scale(this.dir);
+		i = new Vector(-i.y, i.x).scale(this.dir);
 
 		rider.shadowKnee = rider.hip.sum(rider.shadowFoot).scale(0.5).sum(i.scale(200 / i.lengthSquared()));
 		return rider;
 	}
 
 	draw(ctx) {
-		super.draw(ctx);
-		let rearWheel = this.rearWheel.displayPosition.toPixel();
-		let frontWheel = this.frontWheel.displayPosition.toPixel();
+		ctx.save();
+		this.parent.ghost && (ctx.globalAlpha /= 2,
+		this.parent.scene.cameraFocus && this.parent.scene.cameraFocus !== this.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.hitbox.pos.distanceTo(this.parent.scene.cameraFocus.pos) / (this.hitbox.size / 2) ** 2))));
+		ctx.lineWidth = 3.5 * this.parent.scene.zoom;
+		this.rearWheel.draw(ctx);
+		this.frontWheel.draw(ctx);
+
+		let rearWheel = this.rearWheel.pos.toPixel();
+		let frontWheel = this.frontWheel.pos.toPixel();
 		let l = frontWheel.difference(rearWheel);
-		let i = new Coordinates(frontWheel.y - rearWheel.y, rearWheel.x - frontWheel.x).scale(this.dir);
+		let i = new Vector(frontWheel.y - rearWheel.y, rearWheel.x - frontWheel.x).scale(this.dir);
 		let a = rearWheel.sum(l.scale(0.3)).sum(i.scale(0.25));
 		let n = rearWheel.sum(l.scale(0.84)).sum(i.scale(0.42));
 		let c = rearWheel.sum(l.scale(0.84)).sum(i.scale(0.37));
 		let w = rearWheel.sum(l.scale(0.4)).sum(i.scale(0.05));
 
-		ctx.lineWidth = this.parent.scene.camera.zoom * 3;
+		ctx.lineWidth = this.parent.scene.zoom * 3;
 		ctx.beginPath()
 		ctx.moveTo(rearWheel.x, rearWheel.y)
 		ctx.lineTo(a.x, a.y)
@@ -76,7 +100,7 @@ export default class BMX extends Bike {
 		ctx.lineTo(w.x, w.y)
 		ctx.lineTo(rearWheel.x, rearWheel.y);
 
-		c = new Coordinates(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(this.parent.scene.camera.zoom * 6);
+		c = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(this.parent.scene.zoom * 6);
 		let foot = w.sum(c);
 		let shadowFoot = w.difference(c);
 
@@ -106,43 +130,31 @@ export default class BMX extends Bike {
 		ctx.stroke();
 
 		if (!this.parent.dead) {
-			i = this.parent.hitbox.displayPosition.toPixel().difference(rearWheel).difference(l.scale(0.5));
+			i = this.hitbox.pos.toPixel().difference(rearWheel).difference(l.scale(0.5));
 			ctx.beginPath();
 			switch (this.parent.cosmetics.head) {
-			case 'cap':
-				ctx.moveTo(...Object.values(a.sum(l.scale(0.4)).sum(i.scale(1.1))))
-				ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.05))))
-				break;
-			case 'hat':
-				let head = a.sum(l.scale(0.35)).sum(i.scale(1.15));
-				let h = a.difference(l.scale(0.05)).sum(i.scale(1.1));
-				ctx.moveTo(head.x, head.y),
-				ctx.lineTo(...Object.values(a.sum(l.scale(0.25)).sum(i.scale(1.13)))),
-				ctx.lineTo(...Object.values(head.difference(l.scale(0.1)).sum(i.scale(0.2)))),
-				ctx.lineTo(...Object.values(h.sum(l.scale(0.02)).sum(i.scale(0.2)))),
-				ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.11)))),
-				ctx.lineTo(h.x, h.y),
-				ctx.fill()
+				case 'cap':
+					ctx.moveTo(...Object.values(a.sum(l.scale(0.4)).sum(i.scale(1.1))))
+					ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.05))))
+					break;
+
+				case 'hat':
+					let head = a.sum(l.scale(0.35)).sum(i.scale(1.15));
+					let h = a.difference(l.scale(0.05)).sum(i.scale(1.1));
+					ctx.moveTo(head.x, head.y),
+					ctx.lineTo(...Object.values(a.sum(l.scale(0.25)).sum(i.scale(1.13)))),
+					ctx.lineTo(...Object.values(head.difference(l.scale(0.1)).sum(i.scale(0.2)))),
+					ctx.lineTo(...Object.values(h.sum(l.scale(0.02)).sum(i.scale(0.2)))),
+					ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.11)))),
+					ctx.lineTo(h.x, h.y),
+					ctx.fill();
+					break;
 			}
 
-			ctx.lineWidth = this.parent.scene.camera.zoom * 2
+			ctx.lineWidth = this.parent.scene.zoom * 2
 			ctx.stroke();
 		}
 
-		ctx.restore()
-	}
-
-	reset() {
-		super.reset();
-		this.parent.hitbox.position.set(new Coordinates(0, -1));
-		this.rearWheel.position = new Coordinates(-21, 38);
-		this.rearWheel.displayPosition = this.rearWheel.position;
-		this.rearWheel.old.set(this.rearWheel.position);
-		this.frontWheel.position = new Coordinates(21, 38);
-		this.frontWheel.displayPosition = this.frontWheel.position;
-		this.frontWheel.old.set(this.frontWheel.position);
-
-		this.rearSpring.leff = 45;
-		this.chasse.leff = 42;
+		ctx.restore();
 	}
 }

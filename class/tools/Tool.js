@@ -1,7 +1,10 @@
 export default class {
 	constructor(toolHandler) {
-		Object.defineProperty(this, 'parent', { value: toolHandler || null });
-		Object.defineProperty(this, 'scene', { value: toolHandler.scene || null })
+		this.parent = toolHandler;
+	}
+
+	get scene() {
+		return this.parent.scene;
 	}
 
 	get mouse() {

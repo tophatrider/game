@@ -1,0 +1,8 @@
+:root {
+	--accent-color: #333333;
+	--background-color: #1b1b1b;
+	--border-color: #444444;
+	--brightness-multiplier: 1;
+	--text-color: white;
+	color-scheme: dark;
+}

@@ -1,11 +1,12 @@
-export default class EventEmitter {
+export default class {
 	/** @private */
 	#events = new Map();
-	#temp = new WeakSet();
+	#single = new Set();
 
 	/**
-	 * Emit an event to trigger listeners
-	 * @param {string} event 
+	 * 
+	 * @private
+	 * @param {String} event 
 	 * @param  {...any} [args] 
 	 */
 	emit(event, ...args) {
@@ -16,20 +17,21 @@ export default class EventEmitter {
 
 		for (const listener of listeners) {
 			listener.apply(this, args);
-			if (this.#temp.delete(listener)) {
+			if (this.#single.has(listener)) {
 				listeners.delete(listener);
 			}
 		}
 	}
 
 	/**
-	 * Emits several events
-	 * @param {Array<string>} events 
+	 * 
+	 * @private
+	 * @param {Array<String>} events 
 	 * @param {...any} [args] 
 	 */
 	emits(events, ...args) {
 		if (!(events instanceof Array)) {
-			throw new TypeError("Events must be of type: Array<string>");
+			throw new TypeError("Events must be of type: Array<String>");
 		}
 
 		events.forEach(event => this.emit(event, ...args));
@@ -37,22 +39,15 @@ export default class EventEmitter {
 
 	/**
 	 * 
-	 * @alias addListener
-	 * @param {string} event 
-	 * @param {function} listener 
-	 * @param {object} [options] 
-	 * @param {boolean} [options.once] 
-	 * @returns {number}
+	 * @param {String} event 
+	 * @param {Function} listener 
+	 * @returns {Number}
 	 */
-	on(event, listener, options = {}) {
+	on(event, listener) {
 		if (typeof event != 'string') {
-			throw new TypeError("Event must be of type: string");
+			throw new TypeError("Event must be of type: String");
 		} else if (typeof listener != 'function') {
 			throw new TypeError("Listener must be of type: Function");
-		} else if (typeof options != 'object') {
-			throw new TypeError("Options must be of type: Object")
-		} else if (options.once) {
-			this.#temp.add(listener);
 		}
 
 		if (!this.#events.has(event)) {
@@ -66,17 +61,19 @@ export default class EventEmitter {
 
 	/**
 	 * 
-	 * @param {string} event 
+	 * @param {String} event 
 	 * @param {Function} listener 
 	 * @returns {Function}
 	 */
 	once(event, listener) {
-		return this.on(event, listener, { once: true });
+		const size = this.on(...arguments);
+		this.#single.add(listener);
+		return size;
 	}
 
 	/**
 	 * 
-	 * @param {string} event 
+	 * @param {String} event 
 	 * @returns {Set}
 	 */
 	listeners(event) {
@@ -85,8 +82,8 @@ export default class EventEmitter {
 
 	/**
 	 * 
-	 * @param {string} event 
-	 * @returns {number}
+	 * @param {String} event 
+	 * @returns {Number}
 	 */
 	listenerCount(event) {
 		return this.listeners(event).size;
@@ -94,34 +91,18 @@ export default class EventEmitter {
 
 	/**
 	 * 
-	 * @param {string} [event] 
-	 * @param {string} [listener] 
-	 * @returns {boolean}
-	 */
-	off(event = null, listener = null) {
-		if (typeof listener == 'function') {
-			return this.removeListener(event);
-		}
-
-		return this.removeAllListeners(event)
-	}
-
-	/**
-	 * 
-	 * @param {string} event 
+	 * @param {String} event 
 	 * @param {Function} listener 
-	 * @returns {boolean}
+	 * @returns {Boolean}
 	 */
 	removeListener(event, listener) {
 		if (typeof event != 'string') {
-			throw new TypeError("Event must be of type: string");
+			throw new TypeError("Event must be of type: String");
 		}
 
 		const listeners = this.#events.get(event);
 		if (listeners !== void 0) {
-			if (listeners.delete(listener)) {
-				this.#temp.delete(listener)
-			}
+			listeners.delete(listener);
 		}
 
 		return true;
@@ -129,16 +110,14 @@ export default class EventEmitter {
 
 	/**
 	 * 
-	 * @param {string} event 
-	 * @returns {boolean}
+	 * @param {String} event 
+	 * @returns {Boolean}
 	 */
 	removeAllListeners(event) {
-		if (typeof event == 'string') {
-			return this.#events.delete(event);
+		if (typeof event != 'string') {
+			throw new TypeError("Event must be of type: String");
 		}
 
-		return this.#events.clear();
+		return this.#events.delete(event);
 	}
 }
-
-Object.defineProperty(EventEmitter.prototype, 'addListener', { value: EventEmitter.prototype.on, writable: true })

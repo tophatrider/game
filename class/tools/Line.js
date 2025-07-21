@@ -5,14 +5,14 @@ export default class extends Tool {
 	scenery = false;
 	clip() {
 		if (this.anchor !== null) {
-			this.scene.track.addLine(this.anchor, this.mouse.position, this.scenery);
+			this.scene.addLine(this.anchor, this.mouse.position, this.scenery);
 			this.mouse.old.set(this.mouse.position);
 			this.anchor = null;
 		}
 	}
 
 	draw(ctx) {
-		if (!this.scene.camera.lock || !this.anchor) {
+		if (!this.scene.cameraLock || !this.anchor) {
 			return;
 		}
 
@@ -20,14 +20,14 @@ export default class extends Tool {
 		let margin = 50;
 		let dirX = (position.x > this.scene.parent.canvas.width - margin) - (position.x < margin);
 		if (dirX !== 0) {
-			this.scene.camera.x += 4 / this.scene.camera.zoom * dirX;
-			this.mouse.position.x += 4 / this.scene.camera.zoom * dirX;
+			this.scene.camera.x += 4 / this.scene.zoom * dirX;
+			this.mouse.position.x += 4 / this.scene.zoom * dirX;
 		}
 
 		let dirY = (position.y > this.scene.parent.canvas.height - margin) - (position.y < margin);
 		if (dirY !== 0) {
-			this.scene.camera.y += 4 / this.scene.camera.zoom * dirY;
-			this.mouse.position.y += 4 / this.scene.camera.zoom * dirY;
+			this.scene.camera.y += 4 / this.scene.zoom * dirY;
+			this.mouse.position.y += 4 / this.scene.zoom * dirY;
 		}
 
 		ctx.beginPath()

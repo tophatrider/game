@@ -1,7 +1,9 @@
 import Item from "./Item.js";
 
 export default class Slowmo extends Item {
-	activate(part) { part.player.slow = true }
+	type = 'S';
 	static color = '#eee';
-	static type = 'S';
+	activate(part) {
+		part.parent.parent.slow = true;
+	}
 }

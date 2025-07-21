@@ -1,5 +1,5 @@
 import Tool from "./Tool.js";
-import Coordinates from "../Coordinates.js";
+import Vector from "../Vector.js";
 
 export default class extends Tool {
 	anchor = null;
@@ -19,8 +19,8 @@ export default class extends Tool {
 			typeof this.selected[type] == 'object' && this.selected[type].splice(0);
 		}
 
-		let min = new Coordinates(this.points[0], this.points[1]).toCanvas(this.scene.parent.canvas)
-		  , max = new Coordinates(this.points[0] + this.points[2], this.points[1] + this.points[3]).toCanvas(this.scene.parent.canvas);
+		let min = new Vector(this.points[0], this.points[1]).toCanvas(this.scene.parent.canvas);
+		let max = new Vector(this.points[0] + this.points[2], this.points[1] + this.points[3]).toCanvas(this.scene.parent.canvas);
 		for (const sector of this.scene.grid.range(min.map(value => Math.floor(value / this.scene.grid.scale)), max.map(value => Math.floor(value / this.scene.grid.scale))).filter(sector => sector.physics.length + sector.scenery.length > 0)) {
 			const types = sector.search(min, max);
 			for (const type in types) {

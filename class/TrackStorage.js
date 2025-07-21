@@ -23,34 +23,22 @@ export default class extends EventEmitter {
 			console.warn('Storage:', err);
 		});
 
-		this._listen()
-	}
+		navigation.addEventListener('navigate', this._onnavigate = this.close.bind(this));
+		// window.addEventListener('beforeunload', this._onbeforeunload = async event => {
+		// 	event.preventDefault();
+		// 	event.returnValue = false;
 
-	_listen() {
-		Object.defineProperties(this, {
-			_closebound: { value: this.close.bind(this), writable: true },
-			_onbeforeunload: { value: (async event => {
-				event.preventDefault();
-				event.returnValue = false;
-	
-				for (const [fileName, writable] of this.writables.entries()) {
-					await writable.close();
-	
-					// const fileHandle = this.cache.get(fileName);
-					// this.writables.set(fileName, await fileHandle.createWritable({ keepExistingData: true }));
-				}
-	
-				return event.returnValue;
-			}).bind(this), writable: true }
-		});
-		window.navigation && navigation.addEventListener('navigate', this._closebound, { passive: true });
-		// window.addEventListener('beforeunload', this._onbeforeunload);
-		window.addEventListener('unload', this._closebound, { once: true, passive: true });
-	}
+		// 	for (const [fileName, writable] of this.writables.entries()) {
+		// 		await writable.close();
 
-	_unlisten() {
-		window.navigation && navigation.removeEventListener('navigate', this._closebound);
-		window.removeEventListener('beforeunload', this._onbeforeunload);
+		// 		// const fileHandle = this.cache.get(fileName);
+		// 		// this.writables.set(fileName, await fileHandle.createWritable({ keepExistingData: true }));
+		// 	}
+
+		// 	return event.returnValue;
+		// });
+
+		window.addEventListener('unload', this.close.bind(this));
 	}
 
 	/**
@@ -148,6 +136,8 @@ export default class extends EventEmitter {
 
 	close() {
 		this.writables.clear();
-		this._unlisten()
+		navigation.removeEventListener('navigate', this._onnavigate);
+		window.removeEventListener('beforeunload', this._onbeforeunload);
+		window.removeEventListener('unload', this._onunload);
 	}
 }

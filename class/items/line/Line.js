@@ -1,32 +1,30 @@
-import Coordinates from "../../Coordinates.js";
+import Vector from "../../Vector.js";
 
 export default class {
-	sectors = new Set();
 	constructor(t, e, i, s, n) {
-		Object.defineProperty(this, 'scene', { value: n || null });
-		// use id as reference for lines in worker and in sectors -- move Track class to worker
-		Object.defineProperty(this, 'id', { value: crypto.randomUUID() });
-		Object.defineProperty(this, 'sectors', { enumerable: false });
-		this.a = t instanceof Coordinates ? t : new Coordinates(t, e);
-		this.b = e instanceof Coordinates ? e : new Coordinates(i, s);
+		this.a = t instanceof Vector ? t : new Vector(t, e);
+		this.b = e instanceof Vector ? e : new Vector(i, s);
+		this.scene = n;
 	}
 
 	get vector() {
-		return this.b.difference(this.a)
+		return this.b.difference(this.a);
 	}
 
 	get length() {
-		return this.vector.length
+		return this.vector.length;
 	}
 
 	draw(ctx, e, i) {
-		ctx.moveTo((this.a.x - e) * this.scene.camera.zoom, (this.a.y - i) * this.scene.camera.zoom);
-		ctx.lineTo((this.b.x - e) * this.scene.camera.zoom, (this.b.y - i) * this.scene.camera.zoom)
+		ctx.beginPath();
+		ctx.moveTo((this.a.x - e) * this.scene.zoom, (this.a.y - i) * this.scene.zoom);
+		ctx.lineTo((this.b.x - e) * this.scene.zoom, (this.b.y - i) * this.scene.zoom);
+		ctx.stroke();
 	}
 
 	erase(vector) {
 		let b = vector.difference(this.a).dot(this.vector.oppositeScale(this.length));
-		let c = new Coordinates();
+		let c = new Vector();
 		if (b >= this.length) {
 			c.set(this.b)
 		} else {
@@ -34,15 +32,7 @@ export default class {
 			b > 0 && c.add(this.vector.oppositeScale(this.length).scale(b));
 		}
 
-		return vector.difference(c).length <= this.scene.toolHandler.currentTool.size
-	}
-
-	findConnectedLine() {
-		let connectedLine = this.scene.track[this.type + 'Lines'].filter(line => line !== this).find(line => line.a.equ(this.b) || line.b.equ(this.b));
-		if (!connectedLine) return '';
-		let nextPoint = connectedLine.a.equ(this.b) ? connectedLine.b : connectedLine.a;
-		connectedLine.recorded = true;
-		return ' ' + nextPoint.toString()
+		return vector.difference(c).length <= this.scene.toolHandler.currentTool.size;
 	}
 
 	move(vector) {
@@ -52,7 +42,7 @@ export default class {
 		this.scene.grid.addItem(this);
 		if (arguments[1] !== false) {
 			this.scene.history.push({
-				undo: () => this.move(Coordinates.from(vector).scale(-1), false),
+				undo: () => this.move(Vector.from(vector).scale(-1), false),
 				redo: () => this.move(vector, false)
 			});
 		}
@@ -61,14 +51,10 @@ export default class {
 	remove() {
 		this.scene.grid.removeItem(this);
 		this.removed = true;
-		return this
-	}
-
-	toJSON() {
-		return { a: this.a.toJSON(), b: this.b.toJSON(), id: this.id, type: this.type }
+		return this;
 	}
 
 	toString() {
-		return this.a.toString() + ' ' + this.b.toString() + this.findConnectedLine()
+		return this.a.toString() + ' ' + this.b.toString();
 	}
 }

@@ -1,46 +1,55 @@
-import Coordinates from "../../Coordinates.js";
+import Vector from "../../Vector.js";
 
 export default class {
-	old = new Coordinates();
-	position = new Coordinates();
+	real = new Vector;
+	old = this.real.clone();
 	size = 10;
-	velocity = new Coordinates();
-	displayPosition = this.position;
+	velocity = new Vector;
+	pos = this.real;
+	lastFixedPos = Object.assign(new Vector, {
+		recorded: true,
+		rendered:  false
+	});
 	constructor(parent, options) {
-		Object.defineProperty(this, 'player', { value: parent || null });
-		if (options instanceof Object) {
-			for (const key in options) {
-				const value = options[key];
-				switch (key) {
-				case 'position':
-				case 'velocity':
-					typeof value == 'object' && this[key].set(value);
-					break;
-				case 'size':
-					typeof value == 'number' || typeof value == 'string' && (this[key] = value)
+		Object.defineProperty(this, 'parent', { value: parent, writable: true });
+		for (const key in options = Object.assign({}, options)) {
+			const option = options[key];
+			switch (key) {
+			case 'real':
+			case 'velocity':
+				typeof option == 'object' && this[key].set(option);
+				break;
+			case 'size':
+				if (typeof option == 'number' || typeof option == 'string') {
+					this[key] = option;
 				}
 			}
 		}
 
-		this.displayPosition = this.position;
-		this.old.set(this.position);
-		Object.defineProperty(this.position, 'old', { value: this.position.clone(), writable: true })
+		this.old.set(this.real);
+		// Object.defineProperty(this.real, 'old', { value: this.real.clone(), writable: true });
 	}
 
 	fixedUpdate() {
-		this.displayPosition = this.position
+		this.pos = this.real;
 	}
 
-	update(progress) {
-		this.displayPosition = this.position.sum(this.velocity.scale(progress))
+	lastTime = -1;
+	update(delta) {
+		if (this.lastFixedPos.rendered) return;
+		if (delta < this.lastTime) {
+			this.lastFixedPos.set(this.real);
+			this.lastFixedPos.rendered = true;
+			this.lastTime = 0;
+			return;
+		}
+
+		this.pos = this.lastFixedPos.lerp(this.real, delta);
+		this.lastTime = delta
 	}
 
-	clone() {
-		const clone = new this.constructor(this.player);
-		clone.position.set(this.position);
-		clone.old.set(this.old);
-		clone.velocity.set(this.velocity);
-		clone.size = this.size;
-		return clone
+	lateUpdate() {
+		this.lastFixedPos.recorded || (// this.lastFixedPos.equ(this.pos),
+		this.lastFixedPos.recorded = true)
 	}
 }

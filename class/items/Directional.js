@@ -1,5 +1,5 @@
+import Vector from "../Vector.js";
 import Item from "./Item.js";
-import Coordinates from "../Coordinates.js";
 
 export default class Triangle extends Item {
 	constructor() {
@@ -8,7 +8,7 @@ export default class Triangle extends Item {
 	}
 
 	get dir() {
-		return new Coordinates(-Math.sin(this.rotation * Math.PI / 180), Math.cos(this.rotation * Math.PI / 180))
+		return new Vector(-Math.sin(this.rotation * Math.PI / 180), Math.cos(this.rotation * Math.PI / 180));
 	}
 
 	draw(ctx) {
@@ -17,9 +17,9 @@ export default class Triangle extends Item {
 		let position = this.position.toPixel();
 		ctx.translate(position.x, position.y);
 		ctx.rotate(this.rotation * Math.PI / 180);
-		ctx.moveTo(-7 * this.scene.camera.zoom, -10 * this.scene.camera.zoom);
-		ctx.lineTo(0, 10 * this.scene.camera.zoom);
-		ctx.lineTo(7 * this.scene.camera.zoom, -10 * this.scene.camera.zoom);
+		ctx.moveTo(-7 * this.scene.zoom, -10 * this.scene.zoom);
+		ctx.lineTo(0, 10 * this.scene.zoom);
+		ctx.lineTo(7 * this.scene.zoom, -10 * this.scene.zoom);
 		ctx.closePath();
 		ctx.fillStyle = this.constructor.color;
 		ctx.fill();
@@ -28,15 +28,11 @@ export default class Triangle extends Item {
 	}
 
 	collide(part) {
-		if (part.position.distanceToSquared(this.position) > 1e3) return;
-		this.activate(part)
-	}
+		if (part.real.distanceToSquared(this.position) > 1e3) {
+			return;
+		}
 
-	toJSON() {
-		return Object.assign(super.toJSON(), {
-			dir: this.dir.toJSON(),
-			rotation: this.rotation
-		})
+		this.activate(part);
 	}
 
 	toString() {
