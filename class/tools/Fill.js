@@ -1,6 +1,6 @@
 import Tool from "./Tool.js";
 
-import Vector from "../Vector.js";
+import Vector from "../core/physics/Vector.js";
 
 export default class extends Tool {
 	selected = [];

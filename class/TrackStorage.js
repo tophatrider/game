@@ -1,4 +1,4 @@
-import EventEmitter from "./EventEmitter.js";
+import EventEmitter from "./core/EventEmitter.js";
 
 export default class extends EventEmitter {
 	#storage = null;
@@ -7,23 +7,25 @@ export default class extends EventEmitter {
 	writables = new Map();
 	constructor() {
 		super();
-		navigator.storage.getDirectory()
-		.then(root => root.getDirectoryHandle('tracks', { create: true }))
-		.then(async dir => {
-			this.#storage = dir;
-			for await (const [fileName, fileHandle] of dir.entries()) {
-				if (fileName.endsWith('.crswap')) continue;
-				this.cache.set(fileName, fileHandle);
-			}
+		// use indexedDB
+		'navigator' in window && navigator.storage.getDirectory()
+			.then(root => root.getDirectoryHandle('tracks', { create: true }))
+			.then(async dir => {
+				this.#storage = dir;
+				for await (const [fileName, fileHandle] of dir.entries()) {
+					if (fileName.endsWith('.crswap')) continue;
+					this.cache.set(fileName, fileHandle);
+				}
 
-			this.readyState = 1;
-			this.emit('open');
-		}).catch(err => {
-			this.emit('error', err);
-			console.warn('Storage:', err);
-		});
+				this.readyState = 1;
+				this.emit('open');
+			})
+			.catch(err => {
+				this.emit('error', err);
+				console.warn('Storage:', err);
+			});
 
-		navigation.addEventListener('navigate', this._onnavigate = this.close.bind(this));
+		'navigation' in window && navigation.addEventListener('navigate', this._onnavigate = this.close.bind(this));
 		// window.addEventListener('beforeunload', this._onbeforeunload = async event => {
 		// 	event.preventDefault();
 		// 	event.returnValue = false;
@@ -136,7 +138,7 @@ export default class extends EventEmitter {
 
 	close() {
 		this.writables.clear();
-		navigation.removeEventListener('navigate', this._onnavigate);
+		'navigation' in window && navigation.removeEventListener('navigate', this._onnavigate);
 		window.removeEventListener('beforeunload', this._onbeforeunload);
 		window.removeEventListener('unload', this._onunload);
 	}

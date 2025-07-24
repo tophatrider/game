@@ -1,5 +1,5 @@
-import Spring from "../physics/Spring.js";
-import Mass from "./Mass.js";
+import Spring from "../../core/physics/Spring.js";
+import Mass from "../../core/entities/Mass.js";
 
 export default class {
 	points = [
@@ -28,7 +28,7 @@ export default class {
 	]
 
 	constructor(parent, stickman) {
-		this.parent = parent;
+		Object.defineProperty(this, 'player', { value: parent, writable: true });
 		for (const point of this.points) {
 			point.size = 3;
 			point.friction = 0.05;
@@ -55,22 +55,22 @@ export default class {
 			, shadowKnee = this.shadowKnee.pos.toPixel()
 			, shadowFoot = this.shadowFoot.pos.toPixel()
 			, hip = this.hip.pos.toPixel()
-			, sternum = head.difference(hand.difference(hip).scale(0.08)).difference(head.difference(hip).scale(0.2));
+			, sternum = head.diff(hand.diff(hip).scale(0.08)).diff(head.diff(hip).scale(0.2));
 
 		// ctx.save();
-		this.parent.ghost && (ctx.globalAlpha /= 2,
-		this.parent.scene.cameraFocus && this.parent.scene.cameraFocus !== this.parent.vehicle.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.parent.vehicle.hitbox.pos.distanceTo(this.parent.scene.cameraFocus.pos) / (this.parent.vehicle.hitbox.size / 2) ** 2))));
-		ctx.lineWidth = 6 * this.parent.scene.zoom;
+		this.player.ghost && (ctx.globalAlpha /= 2,
+		this.player.scene.cameraFocus && this.player.scene.cameraFocus !== this.player.vehicle.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.player.vehicle.hitbox.pos.distanceTo(this.player.scene.cameraFocus.pos) / (this.player.vehicle.hitbox.size / 2) ** 2))));
+		ctx.lineWidth = 6 * this.player.scene.zoom;
 
 		ctx.beginPath()
-		this.parent.dead && (ctx.moveTo(sternum.x, sternum.y),
+		this.player.dead && (ctx.moveTo(sternum.x, sternum.y),
 		ctx.lineTo(shadowElbow.x, shadowElbow.y),
 		ctx.lineTo(shadowHand.x, shadowHand.y))
 		ctx.moveTo(hip.x, hip.y)
 		ctx.lineTo(shadowKnee.x, shadowKnee.y)
 		ctx.lineTo(shadowFoot.x, shadowFoot.y)
 		ctx.save();
-		ctx.strokeStyle = /^dark$/i.test(this.parent.scene.parent.settings.theme) ? '#fbfbfb80' : /^midnight$/i.test(this.parent.scene.parent.settings.theme) ? '#cccccc80' : 'rgba(0,0,0,0.5)';
+		ctx.strokeStyle = /^dark$/i.test(this.player.scene.parent.settings.theme) ? '#fbfbfb80' : /^midnight$/i.test(this.player.scene.parent.settings.theme) ? '#cccccc80' : 'rgba(0,0,0,0.5)';
 		ctx.stroke();
 		ctx.restore();
 
@@ -84,7 +84,7 @@ export default class {
 		ctx.lineTo(foot.x, foot.y)
 		ctx.stroke();
 
-		ctx.lineWidth = 8 * this.parent.scene.zoom;
+		ctx.lineWidth = 8 * this.player.scene.zoom;
 
 		ctx.beginPath()
 		ctx.moveTo(hip.x, hip.y)
@@ -92,9 +92,9 @@ export default class {
 		ctx.stroke();
 
 		ctx.beginPath()
-		ctx.lineWidth = 2 * this.parent.scene.zoom;
-		// this.head.size * (this.parent.scene.zoom / 2.8)
-		ctx.arc(head.x, head.y, 5 * this.parent.scene.zoom, 0, 2 * Math.PI),
+		ctx.lineWidth = 2 * this.player.scene.zoom;
+		// this.head.size * (this.player.scene.zoom / 2.8)
+		ctx.arc(head.x, head.y, 5 * this.player.scene.zoom, 0, 2 * Math.PI),
 		ctx.stroke()
 
 		ctx.globalAlpha = 1;
@@ -106,20 +106,11 @@ export default class {
 			joint.fixedUpdate();
 		for (const point of this.points)
 			point.fixedUpdate();
-		// for (const joint of this.joints)
-		// 	joint.fixedUpdate();
-		// for (const point of this.points)
-		// 	point.fixedUpdate();
 	}
 
 	update() {
 		for (const point of this.points)
 			point.update(...arguments);
-	}
-
-	lateUpdate() {
-		for (const point of this.points)
-			point.lateUpdate(...arguments);
 	}
 
 	setPosition(stickman) {
@@ -149,11 +140,11 @@ export default class {
 		let upper = [this.head, this.elbow, this.shadowElbow, this.hand, this.shadowHand];
 		let lower = [this.hip, this.knee, this.shadowKnee, this.foot, this.shadowFoot];
 		for (const point of upper)
-			point.old.set(point.real.difference(a));
+			point.old.set(point.real.diff(a));
 		for (const point of lower)
-			point.old.set(point.real.difference(b));
+			point.old.set(point.real.diff(b));
 		for (const point of this.points) {
-			point.velocity.set(point.real.difference(point.old));
+			point.velocity.set(point.real.diff(point.old));
 			point.velocity.x += Math.random() - Math.random();
 			point.velocity.y += Math.random() - Math.random();
 		}
@@ -167,6 +158,6 @@ export default class {
 			}
 		}
 
-		return new this.constructor(this.parent, stickman);
+		return new this.constructor(this.player, stickman);
 	}
 }

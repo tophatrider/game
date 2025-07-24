@@ -1,4 +1,4 @@
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 import Item from "./Item.js";
 
 export default class Triangle extends Item {

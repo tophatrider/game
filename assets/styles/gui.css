@@ -1,8 +1,6 @@
-:host {
-	position: relative;
-}
+:host { position: relative }
 
-bhr-game-toolbar>section {
+.toolbar>section {
 	backdrop-filter: blur(2px) brightness(.8);
 	border: 1px solid var(--accent-color);
 	border-radius: 4px;
@@ -11,19 +9,19 @@ bhr-game-toolbar>section {
 }
 
 /* experimental animations - add settings to enable/disable */
-bhr-game-toolbar>section:hover {
+.toolbar>section:hover {
 	scale: 1.05;
 	transition: scale 200ms;
 }
 
-bhr-game-toolbar .toolbar-item:hover:active::before { scale: .8 }
+.toolbar .toolbar-item:hover:active::before { scale: .8 }
 /* experimental animations end */
 
-bhr-game-toolbar .bottom { bottom: 0 }
-bhr-game-toolbar .left { left: 0 }
-bhr-game-toolbar .right { right: 0 }
-bhr-game-toolbar .top { top: 0 }
-bhr-game-toolbar .center {
+.toolbar .bottom { bottom: 0 }
+.toolbar .left { left: 0 }
+.toolbar .right { right: 0 }
+.toolbar .top { top: 0 }
+.toolbar .center {
 	display: flex;
 	left: 0;
 	margin-left: auto !important;
@@ -33,7 +31,7 @@ bhr-game-toolbar .center {
 	width: fit-content;
 }
 
-bhr-game-toolbar .middle {
+.toolbar .middle {
 	bottom: 0;
 	height: fit-content;
 	margin-bottom: auto !important;
@@ -42,24 +40,26 @@ bhr-game-toolbar .middle {
 	top: 0;
 }
 
-bhr-game-toolbar .island {
-	margin: .75vmin;
-	transition: scale 90ms ease-out;
+.toolbar .island {
+	margin: max(4px, .75vmin);
+	transition: scale 90ms ease-out, margin 100ms ease;
 }
 
-bhr-game-toolbar .island.scale:hover {
+:host(.pointer-down) .toolbar .island { margin: -4% }
+
+.toolbar .island.scale:hover {
 	scale: 1.075;
 	transition: scale 90ms ease-out;
 }
 
-bhr-game-toolbar button {
+.toolbar button {
 	background-color: transparent;
 	border: none;
 	color: var(--text-color);
 	padding: .25rem 1rem;
 }
 
-bhr-game-toolbar .toolbar-item {
+.toolbar .toolbar-item {
 	-webkit-font-smoothing: antialiased;
 	-webkit-text-stroke-width: thin;
 	-webkit-user-select: none;
@@ -71,11 +71,12 @@ bhr-game-toolbar .toolbar-item {
 	color: var(--text-color);
 	display: flex;
 	font-size: .75rem;
-	height: 1rem;
+	height: 2vh;
 	justify-content: center;
 	line-height: 1rem;
 	margin: 0;
-	max-height: 2vh;
+	max-height: 1rem;
+	min-height: 12px;
 	outline: none;
 	padding: 0.5rem;
 	pointer-events: all;
@@ -84,19 +85,19 @@ bhr-game-toolbar .toolbar-item {
 	user-select: none;
 }
 
-bhr-game-toolbar .toolbar-item:is(.backtrack, .camera, .fullscreen, .line, .playpause, .rewind)::before { background-color: var(--text-color) }
-bhr-game-toolbar .editor-tools .toolbar-item::before { background-color: transparent }
+.toolbar .toolbar-item:is(.backtrack, .camera, .fullscreen, .line, .playpause, .rewind)::before { background-color: var(--text-color) }
+.toolbar .editor-tools .toolbar-item::before { background-color: transparent }
 
-bhr-game-toolbar button:hover,
-bhr-game-toolbar .toolbar-item:hover,
-bhr-game-toolbar .toolbar-item:has(> input:checked):not(.playpause):hover {
+.toolbar button:hover,
+.toolbar .toolbar-item:hover,
+.toolbar .toolbar-item:has(> input:checked):not(.playpause):hover {
 	background-color: hsla(0, 0%, calc(50% - 40% * var(--brightness-multiplier)), 0.8);
 	transition: all 40ms;
 }
 
-bhr-game-toolbar .toolbar-item:has(> input:checked):not(.playpause) { background-color: hsla(0, 0%, calc(50% - 40% * var(--brightness-multiplier)), 0.7) }
-bhr-game-toolbar .toolbar-item::before { transition: all 200ms }
-bhr-game-toolbar .toolbar-item>:not(input:first-child) {
+.toolbar .toolbar-item:has(> input:checked):not(.playpause) { background-color: hsla(0, 0%, calc(50% - 40% * var(--brightness-multiplier)), 0.7) }
+.toolbar .toolbar-item::before { transition: all 200ms }
+.toolbar .toolbar-item>:not(input:first-child) {
 	display: block;
 	pointer-events: none;
 	transition: all 200ms;

@@ -1,4 +1,4 @@
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 import PhysicsLine from "../items/line/PhysicsLine.js";
 import SceneryLine from "../items/line/SceneryLine.js";
 import Sector from "./sector/Sector.js";
@@ -109,8 +109,8 @@ export default class {
 			let secondX = Math.round(from.x + (secondY - from.y) / factor);
 			let second = new Vector(secondX, secondY);
 
-			let diff1 = first.clone().subtract(from);
-			let diff2 = second.clone().subtract(from);
+			let diff1 = first.clone().sub(from);
+			let diff2 = second.clone().sub(from);
 			if (diff1.lengthSquared() < diff2.lengthSquared()) {
 				initial = first;
 			} else {

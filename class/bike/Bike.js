@@ -1,7 +1,7 @@
-import Vector from "../Vector.js";
-import Mass from "./part/Mass.js";
+import Vector from "../core/math/Vector.js";
+import Mass from "../core/entities/Mass.js";
 import Wheel from "./part/Wheel.js";
-import Spring from "./physics/Spring.js";
+import Spring from "../core/physics/Spring.js";
 
 export default class {
 	dir = 1;
@@ -10,7 +10,7 @@ export default class {
 	points = [];
 	rotationFactor = 0;
 	constructor(parent) {
-		this.parent = parent;
+		Object.defineProperty(this, 'player', { value: parent });
 
 		this.hitbox = new Mass(this); // hitbox
 		this.hitbox.drive = this.destroy.bind(this);
@@ -24,25 +24,21 @@ export default class {
 		this.points.push(this.hitbox, this.frontWheel, this.rearWheel);
 		this.joints.push(this.rearSpring, this.chasse, this.frontSpring);
 
-		// this.name = this.constructor.name;
-	}
-
-	get name() {
-		return this.constructor.name;
+		Object.defineProperty(this, 'name', { value: this.constructor.name });
 	}
 
 	get rider() {
 		const rider = {};
 
-		let t = this.frontWheel.pos.difference(this.rearWheel.pos);
+		let t = this.frontWheel.pos.diff(this.rearWheel.pos);
 		let e = new Vector(t.y, -t.x).scale(this.dir);
 		let s = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(6);
 
-		rider.head = this.rearWheel.pos.sum(t.scale(0.35)).sum(this.hitbox.pos.difference(this.frontWheel.pos.sum(this.rearWheel.pos).scale(0.5)).scale(1.2));
+		rider.head = this.rearWheel.pos.sum(t.scale(0.35)).sum(this.hitbox.pos.diff(this.frontWheel.pos.sum(this.rearWheel.pos).scale(0.5)).scale(1.2));
 		rider.hand = this.rearWheel.pos.sum(t.scale(0.8)).sum(e.scale(0.68));
 		rider.shadowHand = rider.hand.clone();
 
-		let i = rider.head.difference(rider.hand);
+		let i = rider.head.diff(rider.hand);
 		i = new Vector(i.y, -i.x).scale(this.dir);
 
 		rider.elbow = rider.head.sum(rider.hand).scale(0.5).sum(i.scale(130 / i.lengthSquared()));
@@ -50,13 +46,13 @@ export default class {
 		rider.hip = this.rearWheel.pos.sum(t.scale(0.2).sum(e.scale(0.5)));
 		rider.foot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).sum(s);
 
-		i = rider.hip.difference(rider.foot);
+		i = rider.hip.diff(rider.foot);
 		i = new Vector(-i.y, i.x).scale(this.dir);
 
 		rider.knee = rider.hip.sum(rider.foot).scale(0.5).sum(i.scale(160 / i.lengthSquared()));
-		rider.shadowFoot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).difference(s);
+		rider.shadowFoot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).diff(s);
 
-		i = rider.hip.difference(rider.shadowFoot);
+		i = rider.hip.diff(rider.shadowFoot);
 		i = new Vector(-i.y, i.x).scale(this.dir);
 
 		rider.shadowKnee = rider.hip.sum(rider.shadowFoot).scale(0.5).sum(i.scale(160 / i.lengthSquared()));
@@ -64,10 +60,10 @@ export default class {
 	}
 
 	destroy() {
-		this.parent.dead = true;
+		this.player.dead = true;
 		this.hitbox.tangible = false;
 		this.rearWheel.speed = 0;
-		this.parent.createRagdoll();
+		this.player.createRagdoll();
 	}
 
 	swap() {
@@ -76,45 +72,21 @@ export default class {
 		let rearSpring = this.rearSpring.leff;
 		this.rearSpring.leff = this.frontSpring.leff;
 		this.frontSpring.leff = rearSpring;
-		this.parent.ragdoll.setPosition(this.rider);
+		this.player.ragdoll.setPosition(this.rider);
 	}
 
-	// fixedUpdate() {
-	// 	if (this.parent.slow && this.rearWheel.touching && this.frontWheel.touching && !this.parent.dead) {
-	// 		this.parent.slow = false;
-	// 		this.parent.slowParity = 0;
-	// 	}
-
-	// 	if (this.parent.slow) {
-	// 		this.parent.slowParity = 1 - this.parent.slowParity;
-	// 	}
-
-	// 	if (!this.parent.slow || this.parent.slowParity === 0) {
-	// 		if (!this.parent.dead)
-	// 			this.updatePhysics();
-
-	// 		for (let a = this.joints.length - 1; a >= 0; a--)
-	// 			this.joints[a].fixedUpdate();
-	// 		for (let a = this.points.length - 1; a >= 0; a--)
-	// 			this.points[a].fixedUpdate();
-	// 	}
-	// }
-
 	fixedUpdate() {
-		if (!this.parent.dead)
-			this.updatePhysics();
-
-		for (let a = this.joints.length - 1; a >= 0; a--)
-			this.joints[a].fixedUpdate();
-		for (let a = this.points.length - 1; a >= 0; a--)
-			this.points[a].fixedUpdate();
-
-		if (this.parent.slow && this.rearWheel.touching && this.frontWheel.touching) {
-			this.parent.slow = false;
+		if (this.player.slow && this.rearWheel.touching && this.frontWheel.touching && !this.player.dead) {
+			this.player.slow = false;
+			this.player.slowParity = 0;
 		}
 
-		if (!this.parent.slow) {
-			if (!this.parent.dead)
+		if (this.player.slow) {
+			this.player.slowParity = 1 - this.player.slowParity;
+		}
+
+		if (!this.player.slow || this.player.slowParity === 0) {
+			if (!this.player.dead)
 				this.updatePhysics();
 
 			for (let a = this.joints.length - 1; a >= 0; a--)
@@ -125,26 +97,21 @@ export default class {
 	}
 
 	update(progress) {
-		// if (this.parent.slow) {
-		// 	progress = (progress + this.parent.slowParity) / 2;
-		// }
+		if (this.player.slow) {
+			progress = (progress + this.player.slowParity) / 2;
+		}
 
 		for (let a = this.points.length - 1; a >= 0; a--)
 			this.points[a].update(progress);
 	}
 
-	lateUpdate() {
-		for (let a = this.points.length - 1; a >= 0; a--)
-			this.points[a].lateUpdate(...arguments);
-	}
-
 	updatePhysics() {
-		this.rearWheel.speed += (this.parent.gamepad.downKeys.has('up') - this.rearWheel.speed) / 10;
-		let rotate = this.parent.gamepad.downKeys.has('left') - this.parent.gamepad.downKeys.has('right');
+		this.rearWheel.speed += (this.player.gamepad.downKeys.has('up') - this.rearWheel.speed) / 10;
+		let rotate = this.player.gamepad.downKeys.has('left') - this.player.gamepad.downKeys.has('right');
 		this.rearSpring.lean(rotate * this.dir * 5);
 		this.frontSpring.lean(-rotate * this.dir * 5);
 		this.chasse.rotate(rotate / this.rotationFactor);
-		if (this.parent.gamepad.downKeys.has('up')) {
+		if (this.player.gamepad.downKeys.has('up')) {
 			this.pedalSpeed += this.rearWheel.rotationSpeed / 5;
 			if (!rotate) {
 				this.rearSpring.lean(-7);
@@ -163,7 +130,7 @@ export default class {
 	}
 
 	clone() {
-		const clone = new this.constructor(this.parent);
+		const clone = new this.constructor(this.player);
 		clone.dir = this.dir;
 
 		clone.hitbox.real.set(this.hitbox.real);

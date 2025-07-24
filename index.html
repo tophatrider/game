@@ -12,7 +12,7 @@
 	<div id="game-container">
 		<canvas id="view"></canvas>
 		<div class="bhr-game-overlay" style="display: none;">
-			<input type="checkbox" id="game-overlay" style="display: none;">
+			<input type="checkbox" id="game-overlay" hidden>
 			<nav>
 				<!-- Track upload tab -->
 				<label class="ripple" for="track">Track</label>
@@ -21,8 +21,8 @@
 				<label class="ripple" for="settings">Settings</label>
 				<label class="ripple" for="debug">Debug</label>
 			</nav>
-			<section style="gap: 2px;">
-				<input type="radio" name="bhr-game-overlay-nav" id="track" style="display: none;" checked>
+			<section>
+				<input type="radio" name="bhr-game-overlay-nav" id="track" hidden checked>
 				<div style="display: grid;grid-gap: .125rem;grid-template-columns: repeat(auto-fit, minmax(25vmin, 1fr));">
 					<!-- Toggle move/edit mode button -->
 					<label>Transform Mode<input type="checkbox" onchange="game.scene.transformMode = event.target.checked"></label>
@@ -170,7 +170,7 @@
 				</dialog>
 			</section>
 			<section style="display: none;">
-				<input type="radio" name="bhr-game-overlay-nav" id="ghost" style="display: none;">
+				<input type="radio" name="bhr-game-overlay-nav" id="ghost" hidden>
 				<!-- Display races (game.scene.races/game.scene.players/game.scene.ghosts) -->
 				<div style="display: grid;grid-gap: .125rem;grid-template-columns: repeat(auto-fit, minmax(25vmin, 1fr));">
 					<button onclick="game.scene.ghosts.splice(0);" style="background-color: hsl(0deg 40% 40% / calc(50% + 10% * var(--brightness-multiplier)));">Clear</button>
@@ -211,7 +211,7 @@
 				</dialog>
 			</section>
 			<section style="display: none;">
-				<input type="radio" name="bhr-game-overlay-nav" id="recorder-toggle" style="display: none;">
+				<input type="radio" name="bhr-game-overlay-nav" id="recorder-toggle" hidden>
 				<button style="width: -webkit-fill-available;" onclick="game.createRecorder(blobURL => (download.href = blobURL) && loadrecording.showModal()).start(),recorder.style.removeProperty('display'),document.querySelector('#game-overlay').checked = false" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()">Start Recorder</button>
 				<label>FPS&emsp;<input type="number" min="10" max="300" step="10" value="50"></label>
 				<button style="width: -webkit-fill-available;" disabled><a download="bhr_recording" id="adownload">Download</a></button>

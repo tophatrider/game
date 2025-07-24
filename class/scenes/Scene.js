@@ -1,9 +1,10 @@
-import Player from "../Player.js";
+import Player from "../player/Player.js";
+import GhostPlayer from "../player/GhostPlayer.js";
 
 import ToolHandler from "../handler/Tool.js";
 import UndoManager from "../managers/Undo.js";
 
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 import PhysicsLine from "../items/line/PhysicsLine.js";
 import SceneryLine from "../items/line/SceneryLine.js";
 
@@ -41,30 +42,27 @@ export default class {
 	toolHandler = new ToolHandler(this);
 	// transformMode = false;
 	zoomFactor = 1 * window.devicePixelRatio;
-	canvasPool = []
+	canvasPool = [];
 	constructor(parent) {
+		Object.defineProperty(this, 'game', { value: parent, writable: true });
 		this.parent = parent;
-		this.parent.on('checkpoint', this.checkpoint.bind(this));
-		this.parent.on('removeCheckpoint', this.checkpoint.bind(this));
-		this.parent.on('restoreCheckpoint', this.checkpoint.bind(this));
+		parent.on('checkpoint', this.checkpoint.bind(this));
+		parent.on('removeCheckpoint', this.checkpoint.bind(this));
+		parent.on('restoreCheckpoint', this.checkpoint.bind(this));
 		// this.helper.postMessage({ canvas: this.parent.canvas.transferControlToOffscreen() }, [offscreen]);
 		// this.helper.addEventListener('message', ({ data }) => {
 		// 	switch (data.cmd) {
-		// 		case 'ADD_LINE': {
-		// 			this.addLine(...data.args);
-		// 			break;
-		// 		}
+		// 	case 'ADD_LINE':
+		// 		this.addLine(...data.args);
+		// 		break;
+		// 	case 'ADD_LINES':
+		// 		// this.addLine(...data.args);
+		// 		console.log(data)
+		// 		data.combined.forEach(line => {
+		// 			this.addLine(...line);
+		// 		});
 
-		// 		case 'ADD_LINES': {
-		// 			// this.addLine(...data.args);
-		// 			console.log(data)
-		// 			data.combined.forEach(line => {
-		// 				this.addLine(...line);
-		// 			});
-
-		// 			this.processing = false;
-		// 			break;
-		// 		}
+		// 		this.processing = false;
 		// 	}
 		// });
 		this.grid.helper.addEventListener('message', ({ data }) => {
@@ -121,18 +119,13 @@ export default class {
 
 	init(options = {}) {
 		options = Object.assign({ vehicle: 'BMX' }, arguments[0]);
-		if (!/^bmx|mtb$/i.test(options.vehicle)) {
+		if (!/^bmx|mtb$/i.test(options.vehicle))
 			throw new TypeError("Invalid vehicle type.");
-		}
 
 		'id' in options && (this.id = options.id);
 		clearInterval(this.processingTimeout);
 		clearInterval(this.sprocessingTimeout);
-		this.collectables.splice(0);
-		this.grid.rows.clear();
-		this.ghosts.splice(0);
-		this.firstPlayer && this.firstPlayer.gamepad.close();
-		this.players.splice(0);
+		this.dispose();
 		this.players.push(new Player(this, { vehicle: options.vehicle }));
 		this.processing = false;
 		this.progress = this.sprogress = 100;
@@ -204,7 +197,7 @@ export default class {
 		const records = parts.map(item => item.split(/\s+/g).reduce((newArr, arr) => isNaN(arr) ? arr : newArr.add(parseInt(arr)), new Set()));
 		let player = id && this.ghosts.find(player => player.id == id);
 		if (!id || !player) {
-			player = new Player(this, {
+			player = new GhostPlayer(this, {
 				records,
 				time,
 				vehicle
@@ -286,19 +279,10 @@ export default class {
 	}
 
 	lateUpdate() {
-		if (!this.paused && !this.processing && !this.frozen) {
-			let players = this.players;
-			this.targets > 0 && (players = players.filter(player => player.targetsCollected !== this.targets));
-			for (const player of players)
-				player.lateUpdate(...arguments);
-			for (const playerGhost of this.ghosts.filter(ghostPlayer => ghostPlayer.targetsCollected !== this.targets))
-				playerGhost.lateUpdate(...arguments);
-		}
-
-		// this.cameraFocus && this.camera.add(this.cameraFocus.pos.difference(this.camera).scale(delta / 100));
+		// this.cameraFocus && this.camera.add(this.cameraFocus.pos.diff(this.camera).scale(delta / 100));
 		if (this.cameraFocus) {
 			const { pos: target } = this.cameraFocus
-				, diff = target.difference(this.camera)
+				, diff = target.diff(this.camera)
 				, distance = diff.length
 				, speed = 3
 				, smoothing = 1 - Math.exp(-speed * (distance / 500));
@@ -309,13 +293,10 @@ export default class {
 	render(ctx) {
 		this.draw(ctx);
 		if (!this.transformMode) {
-			for (const playerGhost of this.ghosts) {
+			for (const playerGhost of this.ghosts)
 				playerGhost.draw(ctx);
-			}
-
-			for (let i = this.players.length - 1; i >= 0; i--) {
+			for (let i = this.players.length - 1; i >= 0; i--)
 				this.players[i].draw(ctx);
-			}
 		}
 
 		this.cameraFocus || this.toolHandler.draw(ctx);
@@ -323,8 +304,8 @@ export default class {
 
 	draw(ctx) {
 		ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-		let min = new Vector().toCanvas(ctx.canvas).oppositeScale(this.grid.scale);
-		let max = new Vector(ctx.canvas.width, ctx.canvas.height).toCanvas(ctx.canvas).oppositeScale(this.grid.scale).map(Math.floor);
+		let min = new Vector().toCanvas(ctx.canvas).downScale(this.grid.scale);
+		let max = new Vector(ctx.canvas.width, ctx.canvas.height).toCanvas(ctx.canvas).downScale(this.grid.scale).map(Math.floor);
 		let sectors = this.grid.range(min, max);
 		for (const sector of sectors.filter(sector => sector.physics.length + sector.scenery.length > 0)) {
 			sector.render(ctx);
@@ -390,7 +371,9 @@ export default class {
 			const goalRadius = (text.fontBoundingBoxAscent + text.fontBoundingBoxDescent) / 2;
 			const goalStrokeWidth = 1;
 			const left = 12;
-			ctx.roundedRect(left - goalRadius / 2, 12 - goalRadius / 2, text.width + goalRadius + goalStrokeWidth / 2 + 10, goalRadius, 40, { padding: 5 });
+			const padding = 5;
+			ctx.beginPath();
+			ctx.roundRect(left - goalRadius / 2 - padding, 12 - goalRadius / 2 - padding, text.width + goalRadius + goalStrokeWidth / 2 + 10 + padding * 2, goalRadius + padding * 2, 40);
 			ctx.save()
 			ctx.fillStyle = 'hsl(0deg 0% 50% / 50%)'
 			ctx.fill()
@@ -413,7 +396,7 @@ export default class {
 					i = (playerGhost.name || 'Ghost') + (playerGhost.targetsCollected === this.targets ? " finished!" : ": " + playerGhost.targetsCollected + " / " + this.targets);
 					text = ctx.measureText(i)
 					const textHeight = text.actualBoundingBoxAscent + text.actualBoundingBoxDescent;
-					ctx.roundedRect(ctx.canvas.width - 12 - text.width, 12 + textHeight * index + index * 12 - textHeight / 2, text.width, (text.fontBoundingBoxAscent + text.fontBoundingBoxDescent) / 2, 40, { padding: 5 });
+					ctx.roundRect(ctx.canvas.width - 12 - text.width, 12 + textHeight * index + index * 12 - textHeight / 2, text.width, (text.fontBoundingBoxAscent + text.fontBoundingBoxDescent) / 2, 40, { padding: 5 });
 					ctx.save()
 					ctx.fillStyle = 'hsl(0deg 0% 50% / 50%)' // if ghost is in focus, make it apparent
 					ctx.fill()
@@ -478,34 +461,33 @@ export default class {
 				let y = parseInt(powerup[2], 32);
 				let a = parseInt(powerup[3], 32);
 				switch (powerup[0]) {
-					case "T":
-						powerup = new Target(this, x, y);
-						this.collectables.push(powerup);
-						break;
-					case "C":
-						powerup = new Checkpoint(this, x, y);
-						this.collectables.push(powerup);
-						break;
-					case "B":
-						powerup = new Boost(this, x, y, a + 180);
-						break;
-					case "G":
-						powerup = new Gravity(this, x, y, a + 180);
-						break;
-					case "O":
-						powerup = new Bomb(this, x, y);
-						break;
-					case "S":
-						powerup = new Slowmo(this, x, y);
-						break;
-					case "A":
-						powerup = new Antigravity(this, x, y);
-						break;
-					case "W":
-						powerup = new Teleporter(this, x, y);
-						powerup.createAlt(a, parseInt(powerup[4], 32));
-						this.collectables.push(powerup);
-						break;
+				case "T":
+					powerup = new Target(this, x, y);
+					this.collectables.push(powerup);
+					break;
+				case "C":
+					powerup = new Checkpoint(this, x, y);
+					this.collectables.push(powerup);
+					break;
+				case "B":
+					powerup = new Boost(this, x, y, a + 180);
+					break;
+				case "G":
+					powerup = new Gravity(this, x, y, a + 180);
+					break;
+				case "O":
+					powerup = new Bomb(this, x, y);
+					break;
+				case "S":
+					powerup = new Slowmo(this, x, y);
+					break;
+				case "A":
+					powerup = new Antigravity(this, x, y);
+					break;
+				case "W":
+					powerup = new Teleporter(this, x, y);
+					powerup.createAlt(a, parseInt(powerup[4], 32));
+					this.collectables.push(powerup);
 				}
 
 				if (powerup) {
@@ -563,19 +545,17 @@ export default class {
 
 	reset() {
 		this.currentTime = 0;
-		for (const player of this.players) {
+		for (const player of this.players)
 			player.reset(...arguments);
-		}
-
-		for (const playerGhost of this.ghosts) {
+		for (const playerGhost of this.ghosts)
 			playerGhost.reset();
-		}
 
 		this.cameraFocus = this.firstPlayer.vehicle.hitbox;
 		this.camera.set(this.cameraFocus.pos);
 		this.paused = false;
 		this.parent.settings.autoPause && (this.frozen = true);
 
+		// this.parent.emit('reset');
 		let progress = document.querySelector('.replay-progress');
 		progress && (this.cameraFocus === this.firstPlayer.vehicle.hitbox ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
 		progress.setAttribute('max', this.cameraFocus.parent.parent.runTime ?? 100),
@@ -594,26 +574,17 @@ export default class {
 
 		return Array(physics.join(','), scenery.join(','), powerups.join(','), this.firstPlayer.vehicle.name).join('#');
 	}
-}
 
-CanvasRenderingContext2D.prototype.roundedRect = function(x, y, width, height, radius = 0, options = {}) {
-	if ('padding' in options) {
-		x -= options.padding;
-		y -= options.padding;
-		width += options.padding * 2;
-		height += options.padding * 2;
+	dispose() {
+		this.collectables.splice(0);
+		this.grid.rows.clear();
+		this.ghosts.splice(0);
+		this.firstPlayer && this.firstPlayer.gamepad.dispose();
+		this.players.splice(0);
 	}
 
-	radius = Math.min(width / 2, height / 2, radius);
-	this.beginPath();
-	this.moveTo(x + width - radius, y);
-	this.arcTo(x + width, y, x + width, y + radius, radius);
-	this.lineTo(x + width, y + height - radius);
-	this.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-	this.lineTo(x + radius, y + height);
-	this.arcTo(x, y + height, x, y + height - radius, radius);
-	this.lineTo(x, y + radius, x, y, radius);
-	this.arcTo(x, y, x + radius, y, radius);
-	this.closePath();
-	return { x, y, width, height, ...options }
+	destroy() {
+		this.dispose();
+		this.game = null;
+	}
 }

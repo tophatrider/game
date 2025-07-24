@@ -1,4 +1,4 @@
-import Vector from "../../Vector.js";
+import Vector from "../../core/math/Vector.js";
 
 export default class {
 	constructor(t, e, i, s, n) {
@@ -8,7 +8,7 @@ export default class {
 	}
 
 	get vector() {
-		return this.b.difference(this.a);
+		return this.b.diff(this.a);
 	}
 
 	get length() {
@@ -23,16 +23,16 @@ export default class {
 	}
 
 	erase(vector) {
-		let b = vector.difference(this.a).dot(this.vector.oppositeScale(this.length));
+		let b = vector.diff(this.a).dot(this.vector.downScale(this.length));
 		let c = new Vector();
 		if (b >= this.length) {
 			c.set(this.b)
 		} else {
 			c.set(this.a);
-			b > 0 && c.add(this.vector.oppositeScale(this.length).scale(b));
+			b > 0 && c.add(this.vector.downScale(this.length).scale(b));
 		}
 
-		return vector.difference(c).length <= this.scene.toolHandler.currentTool.size;
+		return vector.diff(c).length <= this.scene.toolHandler.currentTool.size;
 	}
 
 	move(vector) {

@@ -1,4 +1,4 @@
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 import Tool from "./Tool.js";
 
 export default class extends Tool {
@@ -17,7 +17,7 @@ export default class extends Tool {
 			this.trackOffset.add(offset);
 		}
 
-		this.mouse.down && (this.scene.camera.subtract(offset),
-		this.mouse.position.subtract(offset));
+		this.mouse.down && (this.scene.camera.sub(offset),
+		this.mouse.position.sub(offset));
 	}
 }

@@ -11,12 +11,17 @@ html {
 	font-family: Arial, Helvetica, sans-serif;
 }
 
-body { margin: 0 }
+body {
+	margin: 0;
+	pointer-events: none;
+	touch-action: none;
+}
 
 canvas#view {
 	background-color: var(--background-color);
 	height: 100vh;
 	min-height: 240px;
+	pointer-events: stroke;
 	touch-action: none;
 	width: 100vw;
 }
@@ -29,8 +34,6 @@ canvas#view {
 }
 
 div#game-container {
-	display: block;
-	width: fit-content;
 	position: relative;
 	margin: auto;
 	max-height: 100vh;

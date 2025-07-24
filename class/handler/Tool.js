@@ -75,6 +75,7 @@ export default class {
 
 	press(event) {
 		this.currentTool.press(event);
+		this.scene.parent.container.classList.add('pointer-down');
 	}
 
 	stroke(event) {
@@ -83,6 +84,7 @@ export default class {
 
 	clip(event) {
 		this.currentTool.clip(event);
+		this.scene.parent.container.classList.remove('pointer-down');
 	}
 
 	update() {

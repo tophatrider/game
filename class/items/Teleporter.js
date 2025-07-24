@@ -1,4 +1,4 @@
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 import Collectable from "./Collectable.js";
 
 export default class Teleporter extends Collectable {
@@ -22,8 +22,8 @@ export default class Teleporter extends Collectable {
 
 	collide(part) {
 		if (this.alt === null) return;
-		if (part.real.distanceToSquared(this.alt) < 500 && !part.parent.parent.dead && !part.parent.parent.itemsCollected.has(this.id)) {
-			part.parent.parent.itemsCollected.add(this.id);
+		if (part.real.distanceToSquared(this.alt) < 500 && !part.parent.player.dead && !part.parent.player.itemsCollected.has(this.id)) {
+			part.parent.player.itemsCollected.add(this.id);
 			this.activate(part, true);
 			return;
 		}

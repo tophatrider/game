@@ -1,5 +1,5 @@
 import Tool from "./Tool.js";
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 
 export default class extends Tool {
 	anchor = null;

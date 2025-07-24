@@ -1,8 +1,8 @@
 import Bike from "./Bike.js";
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 
 export default class BMX extends Bike {
-	constructor(parent) {
+	constructor() {
 		super(...arguments);
 
 		this.hitbox.size = 14;
@@ -40,34 +40,34 @@ export default class BMX extends Bike {
 	get rider() {
 		const rider = {};
 
-		let t = this.frontWheel.pos.difference(this.rearWheel.pos);
+		let t = this.frontWheel.pos.diff(this.rearWheel.pos);
 		let e = new Vector(t.y, -t.x).scale(this.dir);
 		let s = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(6);
 
-		let r = this.hitbox.pos.difference(this.rearWheel.pos).difference(t.scale(0.5));
+		let r = this.hitbox.pos.diff(this.rearWheel.pos).diff(t.scale(0.5));
 		let a = this.rearWheel.pos.sum(t.scale(0.3)).sum(e.scale(0.25));
 
 		rider.head = a.sum(t.scale(0.15)).sum(r.scale(1.05));
-		// rider.head = this.hitbox.pos.difference(t.scale(0.05)).sum(e.scale(0.3));
+		// rider.head = this.hitbox.pos.diff(t.scale(0.05)).sum(e.scale(0.3));
 		rider.sternum /* .head */ = a.sum(t.scale(0.05)).sum(r.scale(0.88));
 		rider.hand = this.rearWheel.pos.sum(t.scale(0.8)).sum(e.scale(0.68));
 		rider.shadowHand = rider.hand.clone();
 
-		let i = rider.sternum.difference(rider.hand);
+		let i = rider.sternum.diff(rider.hand);
 		i = new Vector(i.y, -i.x).scale(this.dir);
 
-		rider.elbow = i.scale(130 / i.lengthSquared()).sum(rider.sternum.difference(rider.hand).scale(.4)).sum(rider.hand);
+		rider.elbow = i.scale(130 / i.lengthSquared()).sum(rider.sternum.diff(rider.hand).scale(.4)).sum(rider.hand);
 		rider.shadowElbow = rider.elbow.clone();
-		rider.hip = a.difference(t.scale(0.1)).sum(r.scale(0.3));
+		rider.hip = a.diff(t.scale(0.1)).sum(r.scale(0.3));
 		rider.foot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).sum(s);
 
-		i = rider.hip.difference(rider.foot);
+		i = rider.hip.diff(rider.foot);
 		i = new Vector(-i.y, i.x).scale(this.dir);
 
 		rider.knee = rider.hip.sum(rider.foot).scale(0.5).sum(i.scale(200 / i.lengthSquared()));
-		rider.shadowFoot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).difference(s);
+		rider.shadowFoot = this.rearWheel.pos.sum(t.scale(0.4)).sum(e.scale(0.05)).diff(s);
 
-		i = rider.hip.difference(rider.shadowFoot);
+		i = rider.hip.diff(rider.shadowFoot);
 		i = new Vector(-i.y, i.x).scale(this.dir);
 
 		rider.shadowKnee = rider.hip.sum(rider.shadowFoot).scale(0.5).sum(i.scale(200 / i.lengthSquared()));
@@ -76,22 +76,22 @@ export default class BMX extends Bike {
 
 	draw(ctx) {
 		ctx.save();
-		this.parent.ghost && (ctx.globalAlpha /= 2,
-		this.parent.scene.cameraFocus && this.parent.scene.cameraFocus !== this.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.hitbox.pos.distanceTo(this.parent.scene.cameraFocus.pos) / (this.hitbox.size / 2) ** 2))));
-		ctx.lineWidth = 3.5 * this.parent.scene.zoom;
+		this.player.ghost && (ctx.globalAlpha /= 2,
+		this.player.scene.cameraFocus && this.player.scene.cameraFocus !== this.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.hitbox.pos.distanceTo(this.player.scene.cameraFocus.pos) / (this.hitbox.size / 2) ** 2))));
+		ctx.lineWidth = 3.5 * this.player.scene.zoom;
 		this.rearWheel.draw(ctx);
 		this.frontWheel.draw(ctx);
 
 		let rearWheel = this.rearWheel.pos.toPixel();
 		let frontWheel = this.frontWheel.pos.toPixel();
-		let l = frontWheel.difference(rearWheel);
+		let l = frontWheel.diff(rearWheel);
 		let i = new Vector(frontWheel.y - rearWheel.y, rearWheel.x - frontWheel.x).scale(this.dir);
 		let a = rearWheel.sum(l.scale(0.3)).sum(i.scale(0.25));
 		let n = rearWheel.sum(l.scale(0.84)).sum(i.scale(0.42));
 		let c = rearWheel.sum(l.scale(0.84)).sum(i.scale(0.37));
 		let w = rearWheel.sum(l.scale(0.4)).sum(i.scale(0.05));
 
-		ctx.lineWidth = this.parent.scene.zoom * 3;
+		ctx.lineWidth = this.player.scene.zoom * 3;
 		ctx.beginPath()
 		ctx.moveTo(rearWheel.x, rearWheel.y)
 		ctx.lineTo(a.x, a.y)
@@ -100,9 +100,9 @@ export default class BMX extends Bike {
 		ctx.lineTo(w.x, w.y)
 		ctx.lineTo(rearWheel.x, rearWheel.y);
 
-		c = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(this.parent.scene.zoom * 6);
+		c = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(this.player.scene.zoom * 6);
 		let foot = w.sum(c);
-		let shadowFoot = w.difference(c);
+		let shadowFoot = w.diff(c);
 
 		let C = rearWheel.sum(l.scale(0.17)).sum(i.scale(0.38));
 		let X = rearWheel.sum(l.scale(0.3)).sum(i.scale(0.45));
@@ -129,29 +129,26 @@ export default class BMX extends Bike {
 		ctx.lineTo(hand.x, hand.y)
 		ctx.stroke();
 
-		if (!this.parent.dead) {
-			i = this.hitbox.pos.toPixel().difference(rearWheel).difference(l.scale(0.5));
+		if (!this.player.dead) {
+			i = this.hitbox.pos.toPixel().diff(rearWheel).diff(l.scale(0.5));
 			ctx.beginPath();
-			switch (this.parent.cosmetics.head) {
-				case 'cap':
-					ctx.moveTo(...Object.values(a.sum(l.scale(0.4)).sum(i.scale(1.1))))
-					ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.05))))
-					break;
-
-				case 'hat':
-					let head = a.sum(l.scale(0.35)).sum(i.scale(1.15));
-					let h = a.difference(l.scale(0.05)).sum(i.scale(1.1));
-					ctx.moveTo(head.x, head.y),
-					ctx.lineTo(...Object.values(a.sum(l.scale(0.25)).sum(i.scale(1.13)))),
-					ctx.lineTo(...Object.values(head.difference(l.scale(0.1)).sum(i.scale(0.2)))),
-					ctx.lineTo(...Object.values(h.sum(l.scale(0.02)).sum(i.scale(0.2)))),
-					ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.11)))),
-					ctx.lineTo(h.x, h.y),
-					ctx.fill();
-					break;
+			switch (this.player.cosmetics.head) {
+			case 'cap':
+				ctx.moveTo(...Object.values(a.sum(l.scale(0.4)).sum(i.scale(1.1))));
+				ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.05))));
+			case 'hat':
+				let head = a.sum(l.scale(0.35)).sum(i.scale(1.15));
+				let h = a.diff(l.scale(0.05)).sum(i.scale(1.1));
+				ctx.moveTo(head.x, head.y),
+				ctx.lineTo(...Object.values(a.sum(l.scale(0.25)).sum(i.scale(1.13)))),
+				ctx.lineTo(...Object.values(head.diff(l.scale(0.1)).sum(i.scale(0.2)))),
+				ctx.lineTo(...Object.values(h.sum(l.scale(0.02)).sum(i.scale(0.2)))),
+				ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.11)))),
+				ctx.lineTo(h.x, h.y);
+				ctx.fill();
 			}
 
-			ctx.lineWidth = this.parent.scene.zoom * 2
+			ctx.lineWidth = this.player.scene.zoom * 2;
 			ctx.stroke();
 		}
 

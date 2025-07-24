@@ -1,8 +1,9 @@
 import RecursiveProxy from "./RecursiveProxy.js";
-import EventEmitter from "./EventEmitter.js";
+import EventEmitter from "./core/EventEmitter.js";
+import Events from "./core/Events.js";
 import Scene from "./scenes/Scene.js";
-import Mouse from "./handler/Mouse.js";
-import Vector from "./Vector.js";
+import Mouse from "./core/input/PointerHandler.js";
+import Vector from "./core/math/Vector.js";
 import TrackStorage from "./TrackStorage.js";
 
 const DEFAULTS = {
@@ -23,7 +24,7 @@ export default class extends EventEmitter {
 	#timer = performance.now();
 	#updates = 0;
 	stats = { fps: 0, ups: 0 };
-	config = { maxFrameRate: null, tickRate: 25 };
+	config = { maxFrameRate: null, tickRate: 50 };
 	frameInterval = 1e3 / this.config.maxFrameRate;
 	interpolation = true;
 	updateInterval = 1e3 / this.config.tickRate;
@@ -39,7 +40,7 @@ export default class extends EventEmitter {
 		set: (...args) => {
 			Reflect.set(...args);
 			localStorage.setItem('bhr-settings', JSON.stringify(this.settings, defaultsFilter));
-			this.emit('settingsChange', this.settings);
+			this.emit(Events.SettingsChange, this.settings);
 			return true;
 		},
 		deleteProperty() {
@@ -91,7 +92,7 @@ export default class extends EventEmitter {
 				}
 			}
 		});
-		this.emit('settingsChange', this.settings);
+		this.emit(Events.SettingsChange, this.settings);
 		this.trackStorage.on('open', async () => {
 			if (!this.settings.autoSave) return;
 			await this.trackStorage.open('savedState', { cache: true });
@@ -127,23 +128,7 @@ export default class extends EventEmitter {
 			// }
 		});
 
-		navigation.addEventListener('navigate', this._onnavigate = this.close.bind(this));
-		window.addEventListener('online', this._ononline = event => {
-			const TEMP_KEY = 'bhr-temp';
-			let data = JSON.parse(localStorage.getItem(TEMP_KEY));
-			if (data && data.hasOwnProperty('savedGhosts')) {
-				if (data.savedGhosts.length > 0) {
-					for (const record of data.savedGhosts) {
-						this.emit('trackComplete', record);
-					}
-
-					delete data.savedGhosts;
-				}
-
-				localStorage.setItem(TEMP_KEY, JSON.stringify(data));
-			}
-		});
-
+		'navigation' in window && navigation.addEventListener('navigate', this._onnavigate = this.destroy.bind(this));
 		window.addEventListener('load', this._onload = () => window.dispatchEvent(new Event('online')));
 		// new ResizeObserver(this.setCanvasSize.bind(this)).observe(this.canvas);
 		window.addEventListener('resize', this._onresize = this.setCanvasSize.bind(this));
@@ -159,8 +144,7 @@ export default class extends EventEmitter {
 				await writable.close();
 			}
 		});
-
-		window.addEventListener('unload', this._onunload = this.close.bind(this));
+		window.addEventListener('unload', this._onunload = this.destroy.bind(this));
 	}
 
 	get max() {
@@ -216,9 +200,8 @@ export default class extends EventEmitter {
 		this.lastTime = time;
 		while (this.progress >= 1) {
 			this.progress--;
-			// if (this.emit(Events.Tick, this.scene.currentTime)) continue;
-			if (this.emit('tick', this.scene.currentTime)) continue;
-			this.scene.fixedUpdate();
+			if (this.emit(Events.Tick, this.scene.currentTime)) continue;
+			!this.scene.processing && this.scene.fixedUpdate();
 			this.#updates++
 		}
 
@@ -227,8 +210,7 @@ export default class extends EventEmitter {
 			this.scene.update(this.progress);
 			this.scene.lateUpdate(this.progress);
 			this.scene.render(this.ctx);
-			// this.emit(Events.Draw, this.ctx);
-			this.emit('draw', this.ctx);
+			this.emit(Events.Draw, this.ctx);
 			this.#frames++;
 		}
 
@@ -238,10 +220,10 @@ export default class extends EventEmitter {
 			this.stats.fps = this.#frames,
 			this.#updates = 0,
 			this.#frames = 0;
-			// this.emit(Events.Stats, {
-			// 	fps: this.stats.fps,
-			// 	ups: this.stats.ups
-			// })
+			this.emit(Events.Stats, {
+				fps: this.stats.fps,
+				ups: this.stats.ups
+			})
 		}
 	}
 
@@ -251,10 +233,10 @@ export default class extends EventEmitter {
 		this.mediaRecorder.addEventListener('dataavailable', ({ data }) => {
 			const objectURL = URL.createObjectURL(data);
 			typeof lastArgument == 'function' && lastArgument(objectURL);
-			this.emit('recorderStop', objectURL);
+			this.emit(Events.RecorderStop, objectURL);
 		});
 		this.mediaRecorder.addEventListener('start', event => {
-			this.emit('recorderStart', event);
+			this.emit(Events.RecorderStart, event);
 		})
 		return this.mediaRecorder;
 	}
@@ -439,7 +421,7 @@ export default class extends EventEmitter {
 			case 'p':
 			case ' ':
 				this.ups !== 25 ? this.scene.discreteEvents.add((this.scene.paused ? 'UN' : '') + 'PAUSE') : (this.scene.paused = !this.scene.paused || (this.scene.frozen = false),
-				this.emit('stateChange', this.scene.paused));
+				this.emit(Events.StateChange, this.scene.paused));
 				break;
 		}
 
@@ -587,7 +569,7 @@ export default class extends EventEmitter {
 		}
 
 		let y = new Vector(event.clientX - this.canvas.offsetLeft, event.clientY - this.canvas.offsetTop + window.pageYOffset).toCanvas(this.canvas);
-		this.scene.cameraFocus || this.scene.camera.add(this.mouse.position.difference(y));
+		this.scene.cameraFocus || this.scene.camera.add(this.mouse.position.diff(y));
 	}
 
 	load(code) {
@@ -694,15 +676,14 @@ export default class extends EventEmitter {
 		this.init({ default: true, write: true });
 	}
 
-	close(event) {
+	destroy(event) {
 		cancelAnimationFrame(this.lastFrame);
 		this.mouse.close();
 		// this.scene.close();
 		this.scene.firstPlayer?.gamepad?.close();
-		navigation.removeEventListener('navigate', this._onnavigate);
+		'navigation' in window && navigation.removeEventListener('navigate', this._onnavigate);
 		window.removeEventListener('beforeunload', this._onbeforeunload);
 		window.removeEventListener('load', this._onload);
-		window.removeEventListener('online', this._ononline);
 		window.removeEventListener('resize', this._onresize);
 		window.removeEventListener('unload', this._onunload);
 	}

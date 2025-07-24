@@ -7,7 +7,7 @@ export default class extends Item {
 	}
 
 	activate(part) {
-		part.parent.parent.itemsCollected.add(this.id);
+		part.parent.player.itemsCollected.add(this.id);
 	}
 
 	draw(ctx, position = this.position.toPixel()) {
@@ -22,7 +22,7 @@ export default class extends Item {
 
 	collide(part) {
 		// part.real.distanceTo(this.position) < part.size + this.size + ctx.lineWidth
-		if (part.real.distanceToSquared(this.position) >= 500 || part.parent.parent.dead || part.parent.parent.itemsCollected.has(this.id)) {
+		if (part.real.distanceToSquared(this.position) >= 500 || part.parent.player.dead || part.parent.player.itemsCollected.has(this.id)) {
 			return;
 		}
 

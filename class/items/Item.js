@@ -1,4 +1,4 @@
-import Vector from "../Vector.js";
+import Vector from "../core/math/Vector.js";
 
 export default class {
 	scene = null;
