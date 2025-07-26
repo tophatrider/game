@@ -36,10 +36,10 @@ export default class GhostPlayer extends BasePlayer {
 	// 	}
 
 	// 	// if (this.ghost) {
-	// 	// 	this.records[0].has(this.scene.currentTime) && this.gamepad.toggle('left');
-	// 	// 	this.records[1].has(this.scene.currentTime) && this.gamepad.toggle('right');
-	// 	// 	this.records[2].has(this.scene.currentTime) && this.gamepad.toggle('up');
-	// 	// 	this.records[3].has(this.scene.currentTime) && this.gamepad.toggle('down');
+	// 	// 	this.records[0].has(this.scene.currentTime) && this.gamepad._toggle('left');
+	// 	// 	this.records[1].has(this.scene.currentTime) && this.gamepad._toggle('right');
+	// 	// 	this.records[2].has(this.scene.currentTime) && this.gamepad._toggle('up');
+	// 	// 	this.records[3].has(this.scene.currentTime) && this.gamepad._toggle('down');
 	// 	// 	this.records[4].has(this.scene.currentTime) && this.vehicle.swap();
 	// 	// }
 
@@ -55,10 +55,10 @@ export default class GhostPlayer extends BasePlayer {
 	// #ticks = 0;
 	// set currentTime(value) {
 	// 	if (this.ghost) {
-	// 		this.records[0].has(this.#ticks * this.scene.parent.max) && this.gamepad.toggle('left');
-	// 		this.records[1].has(this.#ticks * this.scene.parent.max) && this.gamepad.toggle('right');
-	// 		this.records[2].has(this.#ticks * this.scene.parent.max) && this.gamepad.toggle('up');
-	// 		this.records[3].has(this.#ticks * this.scene.parent.max) && this.gamepad.toggle('down');
+	// 		this.records[0].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('left');
+	// 		this.records[1].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('right');
+	// 		this.records[2].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('up');
+	// 		this.records[3].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('down');
 	// 		this.records[4].has(this.#ticks * this.scene.parent.max) && this.vehicle.swap();
 	// 	}
 
@@ -90,10 +90,10 @@ export default class GhostPlayer extends BasePlayer {
 				}
 			}
 
-			this.records[0].has(this.playbackTicks * this.scene.parent.max) && this.gamepad.toggle('left');
-			this.records[1].has(this.playbackTicks * this.scene.parent.max) && this.gamepad.toggle('right');
-			this.records[2].has(this.playbackTicks * this.scene.parent.max) && this.gamepad.toggle('up');
-			this.records[3].has(this.playbackTicks * this.scene.parent.max) && this.gamepad.toggle('down');
+			this.records[0].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('left');
+			this.records[1].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('right');
+			this.records[2].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('up');
+			this.records[3].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('down');
 			this.records[4].has(this.playbackTicks * this.scene.parent.max) && this.vehicle.swap();
 
 			this.fixedUpdate();

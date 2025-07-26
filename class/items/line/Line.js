@@ -41,10 +41,10 @@ export default class {
 		this.b.add(vector);
 		this.scene.grid.addItem(this);
 		if (arguments[1] !== false) {
-			this.scene.history.push({
-				undo: () => this.move(Vector.from(vector).scale(-1), false),
-				redo: () => this.move(vector, false)
-			});
+			this.scene.history.record(
+				() => this.move(Vector.from(vector).scale(-1), false),
+				() => this.move(vector, false)
+			);
 		}
 	}
 

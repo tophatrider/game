@@ -29,24 +29,21 @@ export default class extends Tool {
 		}
 
 		// don't remove until deselect is called
-		this.points = [];
+		this.points.splice(0);
 	}
 
 	deleteSelected() {
 		for (const type in this.selected) {
-			if (typeof this.selected[type] != 'object') return;
-			for (const object of this.selected[type]) {
+			if (typeof this.selected[type] != 'object') continue;
+			for (const object of this.selected[type])
 				object.remove();
-			}
 
 			this.selected[type].splice(0);
 		}
 	}
 
 	draw(ctx) {
-		if (this.points.length < 1) {
-			return;
-		}
+		if (this.points.length < 1) return;
 
 		ctx.beginPath(),
 		ctx.rect(...this.points),
@@ -60,16 +57,14 @@ export default class extends Tool {
 	}
 
 	press() {
-		this.anchor = this.mouse.position.clone();
+		this.anchor = this.mouse.position.toStatic();
 	}
 
 	stroke() {
-		if (!this.mouse.down || this.anchor.distanceTo(this.mouse.position) < 4) {
-			return;
-		}
+		if (!this.mouse.down || this.anchor.distanceTo(this.mouse.position) < 4) return;
 
-		let position = this.mouse.position.toPixel();
-		let old = this.anchor.toPixel();
+		const position = this.mouse.position.toPixel()
+			, old = this.anchor.toPixel();
 		this.points = [Math.min(position.x, old.x), Math.min(position.y, old.y), Math.abs(position.x - old.x), Math.abs(position.y - old.y)];
 	}
 }

@@ -61,16 +61,14 @@ export default class {
 		if (this.scenery.length > 0) {
 			let strokeStyle = this.ctx.strokeStyle;
 			this.ctx.strokeStyle = '#'.padEnd(7, /^(dark|midnight)$/i.test(this.parent.scene.parent.settings.theme) ? '6' : 'a');
-			for (const line of this.scenery) {
+			for (const line of this.scenery)
 				line.draw(this.ctx, offsetX, offsetY);
-			}
 
 			this.ctx.strokeStyle = strokeStyle;
 		}
 
-		for (const line of this.physics) {
+		for (const line of this.physics)
 			line.draw(this.ctx, offsetX, offsetY);
-		}
 
 		this.rendered = true;
 	}
@@ -95,19 +93,18 @@ export default class {
 	}
 
 	fix() { // escape collision
-		for (const line of this.physics.filter(line => line.collided)) {
+		for (const line of this.physics.filter(line => line.collided))
 			line.collided = false;
-		}
 	}
 
 	collide(part) {
-		let physics = this.physics.filter(line => !line.collided);
+		const physics = this.physics.filter(line => !line.collided);
 		for (let line = physics.length - 1; line >= 0; line--) {
 			physics[line].collide(part);
 		}
 
 		if (!part.parent.dead) {
-			let powerups = this.powerups.filter(powerup => !powerup.used);
+			const powerups = this.powerups.filter(powerup => !powerup.used);
 			for (let powerup = powerups.length - 1; powerup >= 0; powerup--) {
 				powerups[powerup].collide(part);
 			}

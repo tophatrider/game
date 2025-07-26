@@ -1,42 +1,34 @@
-import RecursiveProxy from "./RecursiveProxy.js";
-import EventEmitter from "./core/EventEmitter.js";
+import RecursiveProxy from "./core/utils/RecursiveProxy.js";
+import EventRelay from "./core/EventRelay.js";
 import Events from "./core/Events.js";
 import Scene from "./scenes/Scene.js";
-import Mouse from "./core/input/PointerHandler.js";
+import Mouse from "./core/input/EnhancedPointerHandler.js";
 import Vector from "./core/math/Vector.js";
 import TrackStorage from "./TrackStorage.js";
-
-const DEFAULTS = {
-	autoPause: false,
-	autoSave: false,
-	autoSaveInterval: 5,
-	theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
+import { DEFAULTS } from "./core/constants.js";
 
 const defaultsFilter = (key, value) => (typeof value == 'object' || DEFAULTS.hasOwnProperty(key)) ? value : void 0;
 
-export default class extends EventEmitter {
+export default class Game extends EventRelay {
+	static Events = Events;
+
 	#openFile = null;
 
 	// game loop related variables
 	#frames = 0;
+	#lastFrame = null;
 	#lastFrameTime = performance.now();
+	#lastTime = performance.now();
 	#timer = performance.now();
 	#updates = 0;
-	stats = { fps: 0, ups: 0 };
 	config = { maxFrameRate: null, tickRate: 50 };
-	frameInterval = 1e3 / this.config.maxFrameRate;
 	interpolation = true;
-	updateInterval = 1e3 / this.config.tickRate;
+	stats = { fps: 0, ups: 0 };
 
 	accentColor = '#000000'; // for themes
-	lastFrame = null;
-	lastTime = performance.now();
-	progress = 0;
-	ups = 25; // 50;
 	mouse = new Mouse();
 	scene = new Scene(this);
-	settings = new RecursiveProxy(Object.assign(DEFAULTS, JSON.parse(localStorage.getItem('bhr-settings'), defaultsFilter)), {
+	settings = new RecursiveProxy(Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('bhr-settings'), defaultsFilter)), {
 		set: (...args) => {
 			Reflect.set(...args);
 			localStorage.setItem('bhr-settings', JSON.stringify(this.settings, defaultsFilter));
@@ -53,24 +45,21 @@ export default class extends EventEmitter {
 	constructor(canvas) {
 		super();
 
-		this.setCanvas(canvas);
-		this.mouse.on('down', this.press.bind(this));
-		this.mouse.on('move', this.stroke.bind(this));
-		this.mouse.on('up', this.clip.bind(this));
-		this.mouse.on('wheel', this.scroll.bind(this));
-
-		document.addEventListener('fullscreenchange', () => navigator.keyboard.lock(['Escape']));
-		document.addEventListener('keydown', this.keydown.bind(this));
-		document.addEventListener('keyup', this.keyup.bind(this));
-		// document.addEventListener('paste', this.paste.bind(this)); // open load-track dialog with pasted code in it
-		document.addEventListener('pointerlockchange', () => {
-			if (!document.pointerLockElement) {
-				const checkbox = this.container.querySelector('.bhr-game-overlay > input');
-				this.scene.paused = checkbox !== null && (checkbox.checked = !checkbox.checked);
-			}
+		Object.defineProperties(this, {
+			_frameInterval: { value: 1e3 / this.config.maxFrameRate, writable: true },
+			_progress: { value: 0, writable: true },
+			_updateInterval: { value: 1e3 / this.config.tickRate, writable: true },
+			_wasPaused: { value: null, writable: true }
 		});
 
-		this.on('settingsChange', settings => {
+		this.setCanvas(canvas);
+		this.mouse.on('cancel', this._handlePointerUp.bind(this));
+		this.mouse.on('down', this._handlePointerDown.bind(this));
+		this.mouse.on('move', this._handlePointerMove.bind(this));
+		this.mouse.on('up', this._handlePointerUp.bind(this));
+		this.mouse.on('wheel', this._handleScroll.bind(this));
+
+		this.on(Events.SettingsChange, settings => {
 			let element;
 			for (const setting in settings) {
 				const value = settings[setting];
@@ -128,11 +117,296 @@ export default class extends EventEmitter {
 			// }
 		});
 
-		'navigation' in window && navigation.addEventListener('navigate', this._onnavigate = this.destroy.bind(this));
-		window.addEventListener('load', this._onload = () => window.dispatchEvent(new Event('online')));
+		this.listen();
+	}
+
+	async _handleKeydown(event) {
+		event.preventDefault();
+		switch (event.key.toLowerCase()) {
+		case 'arrowleft': {
+			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
+			if (focusedPlayerGhost) {
+				this.scene.paused = true;
+				focusedPlayerGhost.playbackTicks = Math.max(0, focusedPlayerGhost.playbackTicks - 5);
+				focusedPlayerGhost.ghostIterator.next(focusedPlayerGhost.playbackTicks);
+			}
+			break;
+		}
+
+		case 'arrowright': {
+			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
+			if (focusedPlayerGhost) {
+				this.scene.paused = true;
+				focusedPlayerGhost.ghostIterator.next(focusedPlayerGhost.playbackTicks + 5);
+			}
+			break;
+		}
+
+		case 'backspace': {
+			if (event.shiftKey) {
+				this.scene.restoreCheckpoint();
+				break;
+			}
+
+			this.scene.removeCheckpoint();
+			break;
+		}
+
+		case 'enter': {
+			if (event.shiftKey) {
+				this.scene.restoreCheckpoint();
+				break;
+			}
+
+			this.scene.returnToCheckpoint();
+			break;
+		}
+
+		case 'tab': {
+			let playersToFocus = Array(...this.scene.players, ...this.scene.ghosts).map(player => player.vehicle.hitbox);
+			let index = playersToFocus.indexOf(this.scene.cameraFocus) + 1;
+			if (playersToFocus.length <= index) {
+				index = 0;
+			}
+
+			// if player is a ghost, show time-progress bar on the bottom
+			this.scene.cameraFocus = playersToFocus[index];
+			this.scene.paused = false;
+			this.scene.frozen = false;
+
+			this.emit(Events.PlayerFocusChange, playersToFocus[index]);
+			break;
+		}
+
+		case '-':
+			this.scene.zoomOut();
+			break;
+		case '+':
+		case '=':
+			this.scene.zoomIn();
+			break;
+		case 'p':
+		case ' ':
+			this.scene.paused = !this.scene.paused || (this.scene.frozen = false),
+			this.emit(Events.StateChange, this.scene.paused);
+			// this.scene.discreteEvents.add((this.scene.paused ? 'UN' : '') + 'PAUSE');
+		}
+
+		if (!this.scene.editMode) return;
+		switch (event.key.toLowerCase()) {
+		case 'c': {
+			if (!event.ctrlKey || this.scene.toolHandler.selected != 'select') {
+				break;
+			}
+
+			const selectedCode = this.scene.toolHandler.currentTool.selected.toString();
+			// selectedCode.length > 3 && navigator.clipboard.writeText(selectedCode);
+			const type = 'text/plain';
+			selectedCode.length > 3 && navigator.clipboard.write([new ClipboardItem({ [type]: new Blob([selectedCode], { type }) })]);
+			break;
+		}
+
+		case 'control':
+			this.scene.toolHandler.ctrlKey = true;
+			break;
+		case 'delete': {
+			if (this.scene.toolHandler.selected != 'select') break;
+			this.scene.toolHandler.currentTool.deleteSelected();
+			break;
+		}
+
+		case 'shift':
+			this.scene.toolHandler.shiftKey = true;
+			break;
+		case 'v': {
+			if (!event.ctrlKey) {
+				break;
+			}
+
+			const queryOpts = { name: 'clipboard-read', allowWithoutGesture: false };
+			const permissionStatus = await navigator.permissions.query(queryOpts).then(permissionStatus => {
+				permissionStatus.onchange = ({ target }) => {
+					target.state == 'granted' && navigator.clipboard.readText().then(console.log);
+				};
+
+				return permissionStatus.state;
+			});
+
+			if (permissionStatus == 'deined') {
+				alert('NotAllowedError: Read permission denied.');
+				break;
+			}
+
+			navigator.clipboard.readText().then(console.log).catch(alert);
+			break;
+		}
+
+		// store arrays of hotkeys in each tool, then compare
+		// let tools = Object.fromEntries(this.scene.toolHandler.cache.entries());
+		// for (const key in tools) {
+		// 	if (tools[key].shortcuts.has(event.key.toLowerCase())) {
+		// 		this.scene.toolHandler.setTool(key, '?');
+		// 		break;
+		// 	}
+		// 	console.log(key, tools[key])
+		// }
+		// break;
+		case 'a':
+			this.scene.toolHandler.setTool('brush', false);
+			break;
+		case 'o':
+			event.ctrlKey && this.openFile({ multiple: event.shiftKey });
+			break;
+		case 'r': {
+			if (event.ctrlKey) {
+				if (event.shiftKey) {
+					this.mediaRecorder.stop();
+				}
+
+				this.createRecorder();
+				this.mediaRecorder.start();
+				if ('recorder' in window) {
+					recorder.style.removeProperty('display');
+				}
+			}
+			break;
+		}
+		case 's': {
+			if (event.ctrlKey) {
+				if (event.shiftKey) {
+					this.saveAs();
+					break;
+				}
+
+				this.save();
+				break;
+			}
+
+			this.scene.toolHandler.setTool('brush', true);
+			break;
+		}
+
+		case 'q':
+			this.scene.toolHandler.setTool('line', false);
+			break;
+		case 'w':
+			this.scene.toolHandler.setTool('line', true);
+			break;
+		case 'e':
+			this.scene.toolHandler.setTool('eraser');
+			break;
+		case 'r':
+			this.scene.toolHandler.setTool(this.scene.toolHandler.selected != 'camera' ? 'camera' : this.scene.toolHandler.old);
+			break;
+		case 'z':
+			event.ctrlKey && this.scene.history[(event.shiftKey ? 're' : 'un') + 'do']();
+		}
+	}
+
+	_handleKeyup(event) {
+		event.preventDefault();
+		switch (event.key.toLowerCase()) {
+		case 'b':
+			event.ctrlKey && this.scene.switchBike();
+			break;
+		case 'f':
+		case 'f11':
+			document.fullscreenElement ? document.exitFullscreen() : this.container.requestFullscreen();
+			break;
+		case 'escape':
+			const checkbox = this.container.querySelector('.bhr-game-overlay > input');
+			this.scene.paused = checkbox !== null && (checkbox.checked = !checkbox.checked);
+		}
+
+		if (!this.scene.editMode) return;
+		switch (event.key.toLowerCase()) {
+		case 'control':
+			this.scene.toolHandler.ctrlKey = false;
+			break;
+		case 'g':
+			this.gui.querySelector('.grid > input').checked = (this.scene.grid.size = 11 - this.scene.grid.size) > 1;
+			break;
+		case 'shift':
+			this.scene.toolHandler.shiftKey = false;
+		}
+	}
+
+	_handlePaste(event) {}
+
+	_handlePointerDown(event) {
+		if (this.scene.processing) return;
+		this.scene.cameraLock = !event.shiftKey;
+		this.scene.cameraFocus = false;
+		if (event.shiftKey) return;
+		else if (event.ctrlKey) {
+			this.scene.toolHandler.selected != 'select' && this.scene.toolHandler.setTool('select');
+		} else if (this.scene.toolHandler.selected == 'select') {
+			this.scene.toolHandler.setTool(this.scene.toolHandler.old);
+		}
+
+		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
+			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
+			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
+		}
+
+		this.scene.toolHandler.press(...arguments);
+	}
+
+	_handlePointerMove(event) {
+		if (this.scene.processing) return;
+		this.scene.toolHandler.selected != 'camera' && (this.scene.cameraFocus = false);
+		if (event.shiftKey && this.mouse.down) {
+			this.scene.toolHandler.cache.get('camera').stroke(...arguments);
+			return;
+		}
+
+		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
+			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
+			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
+		}
+
+		this.scene.toolHandler.stroke(...arguments);
+	}
+
+	_handlePointerUp(event) {
+		if (this.scene.processing) return;
+		this.scene.cameraLock = false;
+		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
+			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
+			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
+		}
+
+		event.shiftKey || this.scene.toolHandler.clip(...arguments);
+	}
+
+	_handleScroll(event) {
+		if (!event.ctrlKey) {
+			this.scene.toolHandler.scroll(...arguments);
+		} else {
+			this.scene.toolHandler.cache.get('camera').scroll(...arguments);
+		}
+
+		const y = new Vector(event.clientX - this.canvas.offsetLeft, event.clientY - this.canvas.offsetTop + window.pageYOffset).toCanvas(this.canvas);
+		this.scene.cameraFocus || this.scene.camera.add(this.mouse.position.diff(y));
+	}
+
+	listen() {
+		super.listen(document, 'fullscreenchange', () => navigator.keyboard.lock(['Escape']));
+		super.listen(document, 'keydown', this._handleKeydown.bind(this));
+		super.listen(document, 'keyup', this._handleKeyup.bind(this));
+		// super.listen(document, 'paste', this._handlePaste.bind(this));
+		super.listen(document, 'pointerlockchange', () => {
+			if (!document.pointerLockElement) {
+				const checkbox = this.container.querySelector('.bhr-game-overlay > input');
+				this.scene.paused = checkbox !== null && (checkbox.checked = !checkbox.checked);
+			}
+		});
+
+		'navigation' in window && super.listen(navigation, 'navigate', this.destroy.bind(this));		
+		super.listen(window, 'load', () => window.dispatchEvent(new Event('online')));
 		// new ResizeObserver(this.setCanvasSize.bind(this)).observe(this.canvas);
-		window.addEventListener('resize', this._onresize = this.setCanvasSize.bind(this));
-		window.addEventListener('beforeunload', this._onbeforeunload = async event => {
+		super.listen(window, 'resize', this.setCanvasSize.bind(this));
+		super.listen(window, 'beforeunload', async event => {
 			event.preventDefault();
 			event.returnValue = false;
 
@@ -144,71 +418,70 @@ export default class extends EventEmitter {
 				await writable.close();
 			}
 		});
-		window.addEventListener('unload', this._onunload = this.destroy.bind(this));
-	}
-
-	get max() {
-		return 1000 / this.ups;
+		super.listen(window, 'unload', this.destroy.bind(this));
+		super.listen();
+		console.debug('[Game] Listeners bound');
 	}
 
 	init(options = {}) {
-		this.lastFrame && cancelAnimationFrame(this.lastFrame);
+		this.#lastFrame && cancelAnimationFrame(this.#lastFrame);
 		options = Object.assign({}, arguments[0]);
 		this.#openFile = null;
 		this.scene.init(options);
 		options.default && this.scene.read('-18 1i 18 1i###BMX');
 		options.code && this.scene.read(options.code);
-		this.lastFrame = requestAnimationFrame(this.render.bind(this));
+		this.#lastFrame = requestAnimationFrame(this.render.bind(this));
 	}
 
 	resetFrameProgress() {
-		this.lastTime = performance.now();
-		this.progress = 0;
-		this.config.maxFrameRate && (this.#lastFrameTime = this.lastTime)
+		this.#lastTime = performance.now();
+		this._progress = 0;
+		this.config.maxFrameRate && (this.#lastFrameTime = this.#lastTime)
 	}
 
-	// ups = 50;
+	#lastRafTime = null;
+	#rafDeltaHist = [];
 	render(time) {
 		// DEBUG
-		if (this._lastRafTime !== null) {
-			let rafDelta = time - this._lastRafTime;
-			(this._rafDeltaHist ||= []).push(rafDelta);
-			if (this._rafDeltaHist.length > 300) this._rafDeltaHist.shift();
+		if (this.#lastRafTime !== null) {
+			let rafDelta = time - this.#lastRafTime;
+			(this.#rafDeltaHist ||= []).push(rafDelta);
+			if (this.#rafDeltaHist.length > 300) this.#rafDeltaHist.shift();
 			if (rafDelta > 20) console.warn(`Slow rAF frame: ${Math.round(rafDelta)}ms`);
 		}
-		this._lastRafTime = time;
+		this.#lastRafTime = time;
 		// DEBUG END
 
-		this.updateCallback = requestAnimationFrame(this.render.bind(this));
+		this.#lastFrame = requestAnimationFrame(this.render.bind(this));
 		if (this._wasPaused !== this.scene.paused) {
 			this._wasPaused = this.scene.paused;
 			!this.scene.paused && this.resetFrameProgress();
-			this.lastTime = time;
+			this.#lastTime = time;
 		}
 
-		let delta = time - this.lastTime;
+		let delta = time - this.#lastTime;
 		if (delta >= 1e3) {
-			delta = this.updateInterval;
+			delta = this._updateInterval;
 		}
 
-		this.progress += delta / this.updateInterval;
-		// if (this.progress >= 1 && this.scene.paused) {
+		this._progress += delta / this._updateInterval;
+		// if (this._progress >= 1 && this.scene.paused) {
 		// 	this.freeze();
 		// 	return;
 		// }
 
-		this.lastTime = time;
-		while (this.progress >= 1) {
-			this.progress--;
+		this.#lastTime = time;
+		while (this._progress >= 1) {
+			this._progress--;
 			if (this.emit(Events.Tick, this.scene.currentTime)) continue;
 			!this.scene.processing && this.scene.fixedUpdate();
 			this.#updates++
 		}
 
-		if (!this.config.maxFrameRate || time - this.#lastFrameTime >= this.frameInterval) {
+		if (!this.config.maxFrameRate || time - this.#lastFrameTime >= this._frameInterval) {
 			this.config.maxFrameRate && (this.#lastFrameTime = time);
-			this.scene.update(this.progress);
-			this.scene.lateUpdate(this.progress);
+			this.scene.update(this._progress);
+			this.scene.lateUpdate(this._progress);
 			this.scene.render(this.ctx);
 			this.emit(Events.Draw, this.ctx);
 			this.#frames++;
@@ -237,7 +510,7 @@ export default class extends EventEmitter {
 		});
 		this.mediaRecorder.addEventListener('start', event => {
 			this.emit(Events.RecorderStart, event);
-		})
+		});
 		return this.mediaRecorder;
 	}
 
@@ -247,6 +520,7 @@ export default class extends EventEmitter {
 		// this.scene.helper.postMessage({ canvas: offscreen }, [offscreen]);
 		this.ctx = this.canvas.getContext('2d');
 		this.container = canvas.parentElement;
+		this.gui = this.container.shadowRoot || this.container.attachShadow({ mode: 'open' });
 		this.setCanvasSize();
 		this.mouse.setTarget(canvas);
 	}
@@ -302,274 +576,6 @@ export default class extends EventEmitter {
 				recenttracks.replaceChildren(...results);
 			}
 		}
-	}
-
-	press(event) {
-		if (this.scene.processing) return;
-		this.scene.cameraLock = !event.shiftKey;
-		this.scene.cameraFocus = false;
-		if (event.shiftKey) return;
-		else if (event.ctrlKey) {
-			this.scene.toolHandler.selected != 'select' && this.scene.toolHandler.setTool('select');
-		} else if (this.scene.toolHandler.selected == 'select') {
-			this.scene.toolHandler.setTool(this.scene.toolHandler.old);
-		}
-
-		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
-			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
-			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
-		}
-
-		this.scene.toolHandler.press(event);
-	}
-
-	stroke(event) {
-		if (this.scene.processing) return;
-		this.scene.toolHandler.selected != 'camera' && (this.scene.cameraFocus = false);
-		if (event.shiftKey && this.mouse.down) {
-			this.scene.toolHandler.cache.get('camera').stroke(event);
-			return;
-		}
-
-		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
-			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
-			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
-		}
-
-		this.scene.toolHandler.stroke(event);
-	}
-
-	clip(event) {
-		if (this.scene.processing) return;
-		this.scene.cameraLock = false;
-		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
-			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
-			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
-		}
-
-		event.shiftKey || this.scene.toolHandler.clip(event);
-	}
-
-	async keydown(event) {
-		event.preventDefault();
-		switch (event.key.toLowerCase()) {
-			case 'arrowleft': {
-				const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
-				if (focusedPlayerGhost) {
-					this.scene.paused = true;
-					focusedPlayerGhost.playbackTicks = Math.max(0, focusedPlayerGhost.playbackTicks - 5);
-					focusedPlayerGhost.ghostIterator.next(focusedPlayerGhost.playbackTicks);
-				}
-				break;
-			}
-
-			case 'arrowright': {
-				const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
-				if (focusedPlayerGhost) {
-					this.scene.paused = true;
-					focusedPlayerGhost.ghostIterator.next(focusedPlayerGhost.playbackTicks + 5);
-				}
-				break;
-			}
-
-			case 'backspace': {
-				if (event.shiftKey) {
-					this.scene.restoreCheckpoint();
-					break;
-				}
-
-				this.scene.removeCheckpoint();
-				break;
-			}
-
-			case 'enter': {
-				if (event.shiftKey) {
-					this.scene.restoreCheckpoint();
-					break;
-				}
-
-				this.scene.returnToCheckpoint();
-				break;
-			}
-
-			case 'tab': {
-				let playersToFocus = Array(...this.scene.players, ...this.scene.ghosts).map(player => player.vehicle.hitbox);
-				let index = playersToFocus.indexOf(this.scene.cameraFocus) + 1;
-				if (playersToFocus.length <= index) {
-					index = 0;
-				}
-
-				// if player is a ghost, show time-progress bar on the bottom
-				this.scene.cameraFocus = playersToFocus[index];
-				this.scene.paused = false;
-				this.scene.frozen = false;
-
-				let progress = document.querySelector('.replay-progress');
-				progress && index === 0 ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
-				progress.setAttribute('max', playersToFocus[index].parent.parent.runTime ?? 100),
-				progress.setAttribute('value', playersToFocus[index].parent.parent.playbackTicks));
-				break;
-			}
-
-			case '-':
-				this.scene.zoomOut();
-				break;
-			case '+':
-			case '=':
-				this.scene.zoomIn();
-				break;
-			case 'p':
-			case ' ':
-				this.ups !== 25 ? this.scene.discreteEvents.add((this.scene.paused ? 'UN' : '') + 'PAUSE') : (this.scene.paused = !this.scene.paused || (this.scene.frozen = false),
-				this.emit(Events.StateChange, this.scene.paused));
-				break;
-		}
-
-		if (this.scene.editMode) {
-			switch (event.key.toLowerCase()) {
-				case 'c': {
-					if (!event.ctrlKey || this.scene.toolHandler.selected != 'select') {
-						break;
-					}
-
-					const selectedCode = this.scene.toolHandler.currentTool.selected.toString();
-					// selectedCode.length > 3 && navigator.clipboard.writeText(selectedCode);
-					const type = 'text/plain';
-					selectedCode.length > 3 && navigator.clipboard.write([new ClipboardItem({ [type]: new Blob([selectedCode], { type }) })]);
-					break;
-				}
-
-				case 'delete': {
-					if (this.scene.toolHandler.selected != 'select') {
-						break;
-					}
-
-					this.scene.toolHandler.currentTool.deleteSelected();
-					break;
-				}
-
-				case 'v': {
-					if (!event.ctrlKey) {
-						break;
-					}
-
-					const queryOpts = { name: 'clipboard-read', allowWithoutGesture: false };
-					const permissionStatus = await navigator.permissions.query(queryOpts).then(permissionStatus => {
-						permissionStatus.onchange = ({ target }) => {
-							target.state == 'granted' && navigator.clipboard.readText().then(console.log);
-						};
-
-						return permissionStatus.state;
-					});
-
-					if (permissionStatus == 'deined') {
-						alert('NotAllowedError: Read permission denied.');
-						break;
-					}
-
-					navigator.clipboard.readText().then(console.log).catch(alert);
-					break;
-				}
-
-				// store arrays of hotkeys in each tool, then compare
-				// let tools = Object.fromEntries(this.scene.toolHandler.cache.entries());
-				// for (const key in tools) {
-				// 	if (tools[key].shortcuts.has(event.key.toLowerCase())) {
-				// 		this.scene.toolHandler.setTool(key, '?');
-				// 		break;
-				// 	}
-				// 	console.log(key, tools[key])
-				// }
-				// break;
-				case 'a':
-					this.scene.toolHandler.setTool('brush', false);
-					break;
-				case 'o':
-					event.ctrlKey && this.openFile({ multiple: event.shiftKey });
-					break;
-				case 'r': {
-					if (event.ctrlKey) {
-						if (event.shiftKey) {
-							this.mediaRecorder.stop();
-						}
-
-						this.createRecorder();
-						this.mediaRecorder.start();
-						if ('recorder' in window) {
-							recorder.style.removeProperty('display');
-						}
-					}
-					break;
-				}
-				case 's': {
-					if (event.ctrlKey) {
-						if (event.shiftKey) {
-							this.saveAs();
-							break;
-						}
-
-						this.save();
-						break;
-					}
-
-					this.scene.toolHandler.setTool('brush', true);
-					break;
-				}
-
-				case 'q':
-					this.scene.toolHandler.setTool('line', false);
-					break;
-				case 'w':
-					this.scene.toolHandler.setTool('line', true);
-					break;
-				case 'e':
-					this.scene.toolHandler.setTool('eraser');
-					break;
-				case 'r':
-					this.scene.toolHandler.setTool(this.scene.toolHandler.selected != 'camera' ? 'camera' : this.scene.toolHandler.old);
-					break;
-				case 'z':
-					event.ctrlKey && this.scene.history[(event.shiftKey ? 're' : 'un') + 'do']();
-					break;
-			}
-		}
-	}
-
-	keyup(event) {
-		event.preventDefault();
-		switch (event.key.toLowerCase()) {
-			case 'b':
-				event.ctrlKey && this.scene.switchBike();
-				break;
-			case 'f':
-			case 'f11':
-				document.fullscreenElement ? document.exitFullscreen() : this.container.requestFullscreen();
-				break;
-			case 'escape':
-				const checkbox = this.container.querySelector('.bhr-game-overlay > input');
-				this.scene.paused = checkbox !== null && (checkbox.checked = !checkbox.checked);
-				break;
-		}
-
-		if (this.scene.editMode) {
-			switch (event.key.toLowerCase()) {
-				case 'g':
-					document.querySelector('.grid > input').checked = (this.scene.grid.size = 11 - this.scene.grid.size) > 1;
-					break;
-			}
-		}
-	}
-
-	paste(event) {}
-	scroll(event) {
-		if (!event.ctrlKey) {
-			this.scene.toolHandler.scroll(event);
-		} else {
-			this.scene.toolHandler.cache.get('camera').scroll(event);
-		}
-
-		let y = new Vector(event.clientX - this.canvas.offsetLeft, event.clientY - this.canvas.offsetTop + window.pageYOffset).toCanvas(this.canvas);
-		this.scene.cameraFocus || this.scene.camera.add(this.mouse.position.diff(y));
 	}
 
 	load(code) {
@@ -677,15 +683,10 @@ export default class extends EventEmitter {
 	}
 
 	destroy(event) {
-		cancelAnimationFrame(this.lastFrame);
+		cancelAnimationFrame(this.#lastFrame);
 		this.mouse.close();
-		// this.scene.close();
-		this.scene.firstPlayer?.gamepad?.close();
-		'navigation' in window && navigation.removeEventListener('navigate', this._onnavigate);
-		window.removeEventListener('beforeunload', this._onbeforeunload);
-		window.removeEventListener('load', this._onload);
-		window.removeEventListener('resize', this._onresize);
-		window.removeEventListener('unload', this._onunload);
+		this.scene.destroy();
+		this.unlisten();
 	}
 
 	static serveToast(toast, timeout) {

@@ -45,7 +45,7 @@
 	transition: scale 90ms ease-out, margin 100ms ease;
 }
 
-:host(.pointer-down) .toolbar .island { margin: -4% }
+:host(.pointer-down) .toolbar .island { margin: /* clamp(-4px, -4%, -16px) */ -4% }
 
 .toolbar .island.scale:hover {
 	scale: 1.075;

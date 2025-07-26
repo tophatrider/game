@@ -2,9 +2,12 @@ import BaseVector from "./BaseVector.js";
 import StaticVector from "./StaticVector.js";
 
 export default class Vector extends BaseVector {
-	set(v) {
+	static Static = StaticVector;
+
+	set(v, normalize = false) {
 		this.x = v.x;
 		this.y = v.y;
+		normalize && this.scaleSelf(window.devicePixelRatio);
 		return this;
 	}
 
@@ -63,14 +66,6 @@ export default class Vector extends BaseVector {
 
 	map(callback = value => value) {
 		return this.constructor.from(callback(this.x), callback(this.y));
-	}
-
-	toCanvas(canvas) {
-		return this.constructor.from(Math.round((this.x - canvas.width / 2) / window.game.scene.zoom + window.game.scene.camera.x), Math.round((this.y - canvas.height / 2) / window.game.scene.zoom + window.game.scene.camera.y));
-	}
-
-	toPixel() {
-		return this.constructor.from((this.x - window.game.scene.camera.x) * window.game.scene.zoom + window.game.canvas.width / 2, (this.y - window.game.scene.camera.y) * window.game.scene.zoom + window.game.canvas.height / 2);
 	}
 
 	toStatic() {

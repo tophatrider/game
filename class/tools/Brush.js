@@ -11,9 +11,7 @@ export default class extends Line {
 	}
 
 	stroke() {
-		if (!this.mouse.down) {
-			return;
-		}
+		if (!this.mouse.down) return;
 
 		this.anchor ??= this.mouse.old.clone();
 		if (this.anchor.distanceTo(this.mouse.position) >= this.length) {

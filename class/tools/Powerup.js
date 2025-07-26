@@ -17,7 +17,7 @@ const P = {
 	'slow-mo': Slowmo,
 	goal: Target,
 	teleporter: Teleporter
-}
+};
 
 export default class extends Tool {
 	addPowerup(powerup) {

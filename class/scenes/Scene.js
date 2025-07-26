@@ -2,7 +2,7 @@ import Player from "../player/Player.js";
 import GhostPlayer from "../player/GhostPlayer.js";
 
 import ToolHandler from "../handler/Tool.js";
-import UndoManager from "../managers/Undo.js";
+import UndoManager from "../core/history/UndoManager.js";
 
 import Vector from "../core/math/Vector.js";
 import PhysicsLine from "../items/line/PhysicsLine.js";
@@ -18,6 +18,7 @@ import Gravity from "../items/Gravity.js";
 import Antigravity from "../items/Antigravity.js";
 import Slowmo from "../items/Slowmo.js";
 import Teleporter from "../items/Teleporter.js";
+import Events from "../core/Events.js";
 
 // implement Track class w/ draw/move/scale/flip methods etc..
 export default class {
@@ -94,7 +95,7 @@ export default class {
 	}
 
 	get timeText() {
-		let t = (this.ghostInFocus ? this.ghostInFocus.playbackTicks : (this.currentTime / this.parent.max)) / .03;
+		const t = (this.ghostInFocus ? this.ghostInFocus.playbackTicks : (this.currentTime / this.parent._updateInterval)) / .03;
 		return Math.floor(t / 6e4) + ':' + String((t % 6e4 / 1e3).toFixed(2)).padStart(5, '0');
 	}
 
@@ -211,13 +212,7 @@ export default class {
 		this.camera.set(this.cameraFocus.pos);
 		this.frozen = false;
 		this.paused = false;
-
-		let progress = document.querySelector('.replay-progress');
-		progress && (progress.style.removeProperty('display'),
-		progress.setAttribute('max', player.runTime ?? 100),
-		progress.setAttribute('value', player.ticks));
-
-		this.parent.emit('replayQueued', player, arguments);
+		this.parent.emit(Events.ReplayAdd, player, arguments);
 	}
 
 	collide(part) {
@@ -238,16 +233,14 @@ export default class {
 	fixedUpdate() {
 		this.parent.settings.autoPause && this.firstPlayer.gamepad.downKeys.size > 0 && (this.frozen = false);
 		if (!this.paused && !this.processing && !this.frozen) {
-			for (const player of this.players) {
+			for (const player of this.players)
 				player.fixedUpdate();
-			}
-
 			for (const playerGhost of this.ghosts.filter(ghostPlayer => ghostPlayer.targetsCollected !== this.targets)) {
 				playerGhost.ghostIterator.next();
 				// playerGhost.fixedUpdate();
 			}
 
-			this.currentTime += this.parent.max;
+			this.currentTime += this.parent._updateInterval;
 			// this.currentTime++
 		}
 
@@ -268,6 +261,7 @@ export default class {
 	}
 
 	update() {
+		this.toolHandler.update();
 		if (!this.paused && !this.processing && !this.frozen) {
 			let players = this.players;
 			this.targets > 0 && (players = players.filter(player => player.targetsCollected !== this.targets));
@@ -418,10 +412,10 @@ export default class {
 		cache.push(...this.grid.sector(x + 1, y + 1).erase(vector));
 		cache.push(...this.grid.sector(x, y + 1).erase(vector));
 		cache = Array.from(new Set(cache));
-		this.history.push({
-			undo: () => cache.forEach(item => this.grid.addItem(item)),
-			redo: () => cache.forEach(item => item.remove())
-		});
+		this.history.record(
+			() => cache.forEach(item => this.grid.addItem(item)),
+			() => cache.forEach(item => item.remove())
+		);
 	}
 
 	addLine(start, end, type) {
@@ -433,10 +427,10 @@ export default class {
 			// });
 			this.grid.addItem(line);
 			if (arguments[3] !== false) {
-				this.history.push({
-					undo: line.remove.bind(line),
-					redo: () => this.grid.addItem(line)
-				});
+				this.history.record(
+					line.remove.bind(line),
+					() => this.grid.addItem(line)
+				);
 			}
 
 			return line;
@@ -554,12 +548,7 @@ export default class {
 		this.camera.set(this.cameraFocus.pos);
 		this.paused = false;
 		this.parent.settings.autoPause && (this.frozen = true);
-
-		// this.parent.emit('reset');
-		let progress = document.querySelector('.replay-progress');
-		progress && (this.cameraFocus === this.firstPlayer.vehicle.hitbox ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
-		progress.setAttribute('max', this.cameraFocus.parent.parent.runTime ?? 100),
-		progress.setAttribute('value', this.cameraFocus.parent.parent.ticks)));
+		this.parent.emit(Events.Reset);
 	}
 
 	toString() {

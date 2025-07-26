@@ -15,21 +15,15 @@ export default class extends Line {
 	}
 
 	press() {
-		if (this.active) {
-			return;
-		}
+		if (this.active) return;
 
-		this.anchorA = this.mouse.position.clone();
+		this.anchorA = this.mouse.position.toStatic();
 	}
 
 	stroke() {
-		if (!this.active) {
-			return;
-		}
-
-		for (const line of this.lines.splice(0)) {
+		if (!this.active) return;
+		for (const line of this.lines.splice(0))
 			line.remove();
-		}
 
 		const points = [];
 		for (let i = 0; i < 1; i += this.length / 100) {
@@ -46,16 +40,14 @@ export default class extends Line {
 	}
 
 	clip() {
-		if (this.anchorA.distanceTo(this.mouse.position) < 1) {
-			return;
-		}
+		if (this.anchorA.distanceTo(this.mouse.position) < 1) return;
 
 		this.active = !this.active;
 		if (this.active) {
-			this.anchorB = this.mouse.position.clone();
+			this.anchorB = this.mouse.position.toStatic();
 			return;
 		}
 
-		this.lines = [];
+		this.lines.splice(0);
 	}
 }

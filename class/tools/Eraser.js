@@ -1,6 +1,30 @@
+// import CSSCursor from "../core/ui/CSSCursor.js";
 import Tool from "./Tool.js";
 
 export default class extends Tool {
+	// static cursor = new CSSCursor('circle', {
+	// 	cx: 14,
+	// 	cy: 14,
+	// 	fill: '#ffb6c199',
+	// 	r: 14,
+	// 	size: 28
+	// });
+
+	// #size = 15;
+	// get size() {
+	// 	return this.#size;
+	// }
+
+	// set size(value) {
+	// 	this.#size = value;
+	// 	const cursor = this.constructor.cursor;
+	// 	cursor.cx = value;
+	// 	cursor.cy = value;
+	// 	cursor.r = value;
+	// 	cursor.size = value * 2;
+	// 	this.parent._setCursor(cursor);
+	// }
+
 	size = 15;
 	ignoring = new Set();
 	scroll(event) {

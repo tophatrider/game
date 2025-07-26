@@ -12,15 +12,11 @@ export default class extends Line {
 	}
 
 	stroke() {
-		if (!this.mouse.down || this.mouse.old.distanceTo(this.mouse.position) < 4) {
-			return;
-		}
-
-		for (const line of this.lines) {
+		if (!this.mouse.down || this.mouse.old.distanceTo(this.mouse.position) < 4) return;
+		for (const line of this.lines.splice(0))
 			line.remove();
-		}
 
-		const points = []; this.lines = [];
+		const points = [];
 		for (let i = 0; i <= 360; i += this.length) {
 			points.push(this.mouse.old.sum({
 				x: Math.sqrt((this.mouse.position.x - this.mouse.old.x) ** 2) * Math.cos(i * Math.PI / 180),
@@ -29,12 +25,11 @@ export default class extends Line {
 		}
 
 		points.push(points[0]);
-		for (let i = 0; i < points.length - 1; i++) {
+		for (let i = 0; i < points.length - 1; i++)
 			this.lines.push(this.scene.addLine(points[i], points[i + 1], this.scenery));
-		}
 	}
 
 	clip() {
-		this.lines = [];
+		this.lines.splice(0);
 	}
 }

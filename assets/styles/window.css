@@ -1,0 +1,55 @@
+window-frame {
+	-webkit-user-select: none;
+	-webkit-app-region: drag;
+	background-color: var(--background-color);
+	color: hsl(0 0% 50% / 50%);
+	display: grid;
+	grid-template-columns: 1fr auto;
+	position: relative;
+	user-select: none;
+}
+
+window-frame label {
+	-webkit-app-region: no-drag;
+	font-size: 10px;
+	padding: 0 4px;
+	position: relative;
+}
+
+window-frame label:hover { color: hsl(0 0% 50% / 65%) }
+window-frame div[data-position="left"]>* {
+	max-height: 1.25rem;
+	padding: 0.25rem;
+	vertical-align: middle;
+}
+
+window-frame div[data-position="right"] {
+	display: flex;
+	-webkit-app-region: no-drag;
+}
+
+window-frame button {
+	aspect-ratio: auto;
+	background-color: transparent;
+	border-radius: 0;
+	height: -webkit-fill-available;
+	padding: 0.25rem 1rem;
+	position: relative;
+	vertical-align: middle;
+}
+
+window-frame button:hover {
+	background-color: hsl(0 0% 50% / 20%);
+	color: var(--text-color);
+}
+
+window-frame button:hover:active { background-color: hsl(0 0% 50% / 30%) }
+window-frame button#maximize[title="Restore"]::before {
+	content: "▢";
+	position: absolute;
+	top: 6px;
+	left: 14px;
+}
+
+window-frame button#close:hover { background-color: hsl(0 100% 50% / 85%) }
+window-frame button#close:hover:active { background-color: hsl(0 100% 50% / 55%) }

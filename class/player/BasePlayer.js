@@ -1,5 +1,5 @@
 import { GRAVITY } from "../core/constants.js";
-import SnapshotHandler from "../handler/Snapshot.js";
+import SnapshotHandler from "../core/history/SnapshotManager.js";
 import Vector from "../core/math/Vector.js";
 import MTB from "../bike/MTB.js";
 import BMX from "../bike/BMX.js";

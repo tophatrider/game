@@ -1,42 +1,39 @@
-import EventEmitter from "../EventEmitter.js";
+import EventRelay from "../EventRelay.js";
+import StaticVector from "../math/StaticVector.js";
 // import SmartVector from "../math/SmartVector.js";
 import Vector from "../math/Vector.js";
+import Pointer from "./Pointer.js";
 
-export default class PointerHandler extends EventEmitter {
-	#handlers = [];
-	#bindListeners(target) {
-		if (this.#handlers.length > 0) return;
-		this.#handlers.push([target, 'click', this._handleClick.bind(this)]);
-		this.#handlers.push([target, 'contextmenu', this._handleContextMenu.bind(this)]);
-		this.#handlers.push([target, 'pointerdown', this._handlePointerDown.bind(this)]);
-		this.#handlers.push([document, 'pointerlockchange', this._handlePointerLockChange.bind(this)]);
-		this.#handlers.push([target, 'pointermove', this._handlePointerMove.bind(this), { passive: true }]);
-		this.#handlers.push([target, 'pointerup', this._handlePointerUp.bind(this)]);
-		this.#handlers.push([target, 'wheel', this._handleScroll.bind(this)]);
-		console.debug('[MouseHandler] Listeners bound');
-	}
-
+export default class PointerHandler extends EventRelay {
+	_pointers = new Map();
 	down = false;
-	old = new Vector;
+	old = new StaticVector;
 	position = new Vector; // new SmartVector;
+	primary = null;
 	rawPosition = new Vector;
 	stroke = new Vector;
 	get locked() {
 		return document.pointerLockElement === this.target;
 	}
 
+	get pointers() {
+		return Array.from(this._pointers.values());
+	}
+
 	constructor() {
 		super();
+		Object.defineProperty(this, 'lockedPointerId', { value: null, writable: true });
 		Object.defineProperty(this, 'target', { value: null, writable: true });
 	}
 
 	async _handleClick(event) {
 		event.preventDefault();
+		const pointer = this._pointers.get(event.pointerId);
 		if (event.ctrlKey && event.shiftKey) {
-			await this.lock();
+			await this.lock(event.pointerId);
 		}
 
-		this.emit('click', event);
+		this.emit('click', event, pointer ?? null);
 	}
 
 	_handleContextMenu(event) {
@@ -44,49 +41,80 @@ export default class PointerHandler extends EventEmitter {
 		this.emit('menu', event);
 	}
 
+	_handlePointerCancel(event) {
+		const pointer = this._pointers.get(event.pointerId);
+		pointer && (pointer._update(event, this.target),
+		this._pointers.delete(event.pointerId));
+		this.emit('cancel', event, pointer ?? null);
+	}
+
 	_handlePointerDown(event) {
 		event.preventDefault();
-		this.down = true;
-		this.old.set(this.position);
-		if (!this.locked) {
-			this.rawPosition.set(new Vector(event.offsetX, event.offsetY).scaleSelf(window.devicePixelRatio));
-			this.position.set(this.rawPosition.toCanvas(this.target));
-			this.target.setPointerCapture(event.pointerId);
+		let pointer = this._pointers.get(event.pointerId);
+		if (!pointer) {
+			pointer = new Pointer(event, this.target);
+			this.locked && event.pointerId === this.lockedPointerId && (pointer.locked = true);
 		}
 
-		this.emit('down', event);
+		pointer._setPointerDown(event, this.target);
+		this._pointers.set(event.pointerId, pointer);
+		if (event.isPrimary) {
+			this.down = true;
+			this.primary = pointer;
+			this.old = this.position.toStatic();
+			this.isPrimary = event.button === 0;
+			if (!this.locked) {
+				this.rawPosition.set(new Vector(event.offsetX, event.offsetY, true));
+				this.position.set(this.rawPosition.toCanvas(this.target));
+				this.target.setPointerCapture(event.pointerId);
+			}
+		}
+
+		this.emit('down', event, pointer);
 	}
 
 	_handlePointerLockChange(event) {
-		this.emit('lockchange', event);
-		if (this.locked)
-			this.emit('lock', event);
-		else
-			this.emit('unlock', event);
+		const pointer = this.pointers.find(({ locked }) => locked);
+		if (!this.locked) {
+			pointer && (pointer.locked = false);
+			this.lockedPointerId = null;
+		}
+
+		this.emit('lockChange', event, pointer ?? null);
 	}
 
 	_handlePointerMove(event) {
-		if (this.locked) {
-			this.rawPosition.add(new Vector(event.movementX, event.movementY).scaleSelf(window.devicePixelRatio));
-		} else {
-			this.rawPosition.set(new Vector(event.offsetX, event.offsetY).scaleSelf(window.devicePixelRatio));
+		const pointer = this._pointers.get(event.pointerId);
+		pointer?._setPointerUp(event, this.target);
+		if (event.isPrimary) {
+			if (this.locked) {
+				this.rawPosition.add(new Vector(event.movementX, event.movementY, true));
+			} else {
+				this.rawPosition.set(new Vector(event.offsetX, event.offsetY, true));
+			}
+
+			this.stroke.set(this.position).sub(this.old);
+			this.position.set(this.rawPosition.toCanvas(this.target));
 		}
 
-		this.stroke.set(this.position).sub(this.old);
-		this.position.set(this.rawPosition.toCanvas(this.target));
-		this.emit('move', event);
+		this.emit('move', event, pointer ?? null);
 	}
 
 	_handlePointerUp(event) {
-		event.preventDefault();
-		this.down = false;
-		if (!this.locked) {
-			this.rawPosition.set(new Vector(event.offsetX, event.offsetY).scaleSelf(window.devicePixelRatio));
-			this.position.set(this.rawPosition.toCanvas(this.target));
-			this.target.releasePointerCapture(event.pointerId);
+		const pointer = this._pointers.get(event.pointerId);
+		pointer && (pointer._setPointerUp(event, this.target),
+		event.pointerId !== this.lockedPointerId && this._pointers.delete(event.pointerId));
+		if (this.down && event.isPrimary) {
+			this.down = false;
+			this.primary = null;
+			if (!this.locked) {
+				this.rawPosition.set(new Vector(event.offsetX, event.offsetY, true));
+				this.position.set(this.rawPosition.toCanvas(this.target));
+				this.target.releasePointerCapture(event.pointerId);
+			}
 		}
 
-		this.emit('up', event);
+		this.emit('up', event, pointer ?? null);
 	}
 
 	_handleScroll(event) {
@@ -101,23 +129,37 @@ export default class PointerHandler extends EventEmitter {
 	}
 
 	listen() {
-		this.#bindListeners(this.target || window);
-		for (const [target, ...params] of this.#handlers)
-			target.addEventListener(...params);
+		const target = this.target || window;
+		super.listen(target, 'click', this._handleClick.bind(this));
+		super.listen(target, 'contextmenu', this._handleContextMenu.bind(this));
+		super.listen(target, 'pointercancel', this._handlePointerCancel.bind(this), { passive: true });
+		super.listen(target, 'pointerdown', this._handlePointerDown.bind(this));
+		super.listen(document, 'pointerlockchange', this._handlePointerLockChange.bind(this));
+		super.listen(target, 'pointermove', this._handlePointerMove.bind(this), { passive: true });
+		super.listen(target, 'pointerup', this._handlePointerUp.bind(this), { passive: true });
+		super.listen(target, 'wheel', this._handleScroll.bind(this));
+		super.listen();
+		console.debug('[PointerHandler] Listeners bound');
 	}
 
-	lock(options = {}) {
-		return this.target?.requestPointerLock(Object.assign({ unadjustedMovement: true }, options));
-	}
-
-	unlisten() {
-		for (const [target, event, handler] of this.#handlers)
-			target.removeEventListener(event, handler);
-		this.#handlers.splice(0);
+	lock(pointerId, options = {}) {
+		return this.target?.requestPointerLock?.({
+			unadjustedMovement: true,
+			...options
+		}).then(res => {
+			this.lockedPointerId = pointerId;
+			const pointer = this._pointers.get(pointerId);
+			pointer && (pointer.locked = true);
+			return res
+		});
 	}
 
 	dispose() {
 		this.unlisten();
 		this.target = null;
+	}
+
+	static get isTouchScreen() {
+		return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
 	}
 }

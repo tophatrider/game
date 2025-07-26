@@ -1,7 +1,7 @@
-import EventEmitter from "../EventEmitter.js";
+import EventRelay from "../EventRelay.js";
 import { KEYMAP } from "../constants.js";
 
-export default class StaticInput extends EventEmitter {
+export default class StaticInput extends EventRelay {
 	downKeys = new Set();
 	keymap = KEYMAP;
 	_maskKey(key) {

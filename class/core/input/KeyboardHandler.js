@@ -1,15 +1,6 @@
 import StaticInput from "./StaticInput.js";
 
 export default class KeyboardHandler extends StaticInput {
-	#handlers = [];
-	#bindListeners() {
-		if (this.#handlers.length > 0) return;
-		this.#handlers.push([window, 'blur', this._handleBlur.bind(this)]);
-		this.#handlers.push([window, 'keydown', this._handleKeydown.bind(this)]);
-		this.#handlers.push([window, 'keyup', this._handleKeyup.bind(this)]);
-		console.debug('[KeyboardHandler] Listeners bound');
-	}
-
 	_handleBlur() {
 		this.downKeys.clear();
 	}
@@ -34,15 +25,11 @@ export default class KeyboardHandler extends StaticInput {
 	}
 
 	listen() {
-		this.#bindListeners();
-		for (const [target, ...params] of this.#handlers)
-			target.addEventListener(...params);
-	}
-
-	unlisten() {
-		for (const [target, event, handler] of this.#handlers)
-			target.removeEventListener(event, handler);
-		this.#handlers.splice(0);
+		super.listen(window, 'blur', this._handleBlur.bind(this));
+		super.listen(window, 'keydown', this._handleKeydown.bind(this));
+		super.listen(window, 'keyup', this._handleKeyup.bind(this));
+		super.listen();
+		console.debug('[KeyboardHandler] Listeners bound');
 	}
 
 	dispose() {

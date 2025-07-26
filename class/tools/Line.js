@@ -1,48 +1,65 @@
+import CSSCursor from "../core/ui/CSSCursor.js";
 import Tool from "./Tool.js";
 
 export default class extends Tool {
-	anchor = null;
+	static cursor = new CSSCursor('path', {
+		d: 'M10 0 L10 20 M0 10 L20 10',
+		size: 20,
+		strokeLineCap: 'round',
+		strokeWidth: 2
+	});
+
+	anchors = new Map();
+	old = null;
 	scenery = false;
-	clip() {
-		if (this.anchor === null) return;
-		this.scene.addLine(this.anchor, this.mouse.position, this.scenery);
-		this.mouse.old.set(this.mouse.position);
-		this.anchor = null;
+	clip(event, pointer) {
+		if (!this.anchors.has(pointer.id)) return;
+		const anchor = this.anchors.get(pointer.id);
+		this.scene.addLine(anchor, this.mouse.position, this.scenery);
+		this.old = this.mouse.position.toStatic();
+		this.anchors.delete(pointer.id);
 	}
 
 	draw(ctx) {
-		if (!this.scene.cameraLock || !this.anchor) return;
+		if (!this.scene.cameraLock || this.anchors.size < 1) return;
+		for (const pointer of this.mouse.pointers.filter(({ id }) => this.anchors.has(id))) {
+			const anchor = this.anchors.get(pointer.id)
+				, pos = pointer.position.toPixel();
+			ctx.beginPath();
+			const old = anchor.toPixel();
+			ctx.moveTo(old.x, old.y);
+			ctx.lineTo(pos.x, pos.y);
+			const strokeStyle = ctx.strokeStyle;
+			ctx.strokeStyle = pointer.position.distanceTo(anchor) >= 2 ? '#0f0' : '#f00';
+			ctx.stroke();
+			ctx.strokeStyle = strokeStyle;
+		}
+	}
 
+	update() {
+		if (!this.scene.cameraLock || this.anchors.size < 1) return;
 		const pos = this.mouse.position.toPixel()
-			, margin = 50;
-		let dirX = (pos.x > this.scene.parent.canvas.width - margin) - (pos.x < margin);
+			, margin = 50
+			, dirX = (pos.x > this.scene.parent.canvas.width - margin) - (pos.x < margin);
 		if (dirX !== 0) {
 			this.scene.camera.x += 4 / this.scene.zoom * dirX;
 			this.mouse.position.x += 4 / this.scene.zoom * dirX;
 		}
 
-		let dirY = (pos.y > this.scene.parent.canvas.height - margin) - (pos.y < margin);
+		const dirY = (pos.y > this.scene.parent.canvas.height - margin) - (pos.y < margin);
 		if (dirY !== 0) {
 			this.scene.camera.y += 4 / this.scene.zoom * dirY;
 			this.mouse.position.y += 4 / this.scene.zoom * dirY;
 		}
-
-		ctx.beginPath()
-		const old = this.anchor.toPixel();
-		ctx.moveTo(old.x, old.y);
-		ctx.lineTo(pos.x, pos.y);
-		const strokeStyle = ctx.strokeStyle;
-		ctx.strokeStyle = this.mouse.position.distanceTo(this.mouse.old) >= 2 ? '#0f0' : '#f00'
-		ctx.stroke();
-		ctx.strokeStyle = strokeStyle;
 	}
 
-	press(event) {
+	press(event, pointer) {
+		// Disabled due to select-tool shortcut
 		// if (event.ctrlKey) {
-		// 	this.anchor = this.mouse.old.clone();
+		// 	this.anchors.set(pointer.id, this.old.clone());
 		// 	return;
 		// }
 
-		this.anchor = this.mouse.position.clone();
+		this.anchors.set(pointer.id, pointer.initial.toCanvas(this.scene.parent.canvas));
 	}
 }

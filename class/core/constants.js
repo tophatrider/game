@@ -11,4 +11,11 @@ export const KEYMAP = Object.freeze({
 	z: ['z']
 });
 
+export const DEFAULTS = Object.freeze({
+	autoPause: false,
+	autoSave: false,
+	autoSaveInterval: 5,
+	theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+});
+
 export * as default from "./constants.js";

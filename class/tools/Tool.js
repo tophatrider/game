@@ -1,10 +1,9 @@
 export default class {
-	constructor(toolHandler) {
-		this.parent = toolHandler;
-	}
-
-	get scene() {
-		return this.parent.scene;
+	constructor(parent) {
+		Object.defineProperties(this, {
+			parent: { value: parent, writable: true },
+			scene: { value: parent.scene, writable: true }
+		});
 	}
 
 	get mouse() {

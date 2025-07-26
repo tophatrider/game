@@ -11,12 +11,12 @@ import Select from "../tools/Select.js";
 import TrianglePowerup from "../tools/TrianglePowerup.js";
 import Teleporter from "../tools/Teleporter.js";
 
-export default class {
+export default class ToolHandler {
 	cache = new Map();
 	old = 'camera';
 	selected = 'camera';
 	constructor(parent) {
-		this.scene = parent;
+		Object.defineProperty(this, 'scene', { value: parent, writable: true });
 		this.cache.set('brush', new Brush(this));
 		this.cache.set('camera', new Camera(this));
 		this.cache.set('circle', new Circle(this));
@@ -33,9 +33,8 @@ export default class {
 
 	get currentTool() {
 		if (['antigravity', 'bomb', 'boost', 'checkpoint', 'goal', 'gravity', 'slow-mo'].includes(this.selected)) {
-			if (['boost', 'gravity'].includes(this.selected)) {
+			if (['boost', 'gravity'].includes(this.selected))
 				return this.cache.get('trianglepowerup');
-			}
 
 			return this.cache.get('powerup');
 		}
@@ -43,8 +42,8 @@ export default class {
 		return this.cache.get(this.selected);
 	}
 
-	get ctx() {
-		return this.scene.parent.ctx;
+	_setCursor(cursor) {
+		this.scene.parent.canvas.style.setProperty('cursor', cursor || 'none');
 	}
 
 	setTool(name, style = null) {
@@ -55,36 +54,44 @@ export default class {
 		}
 
 		this.currentTool.update();
-		let powerups = document.querySelector('#powerups');
-		powerups !== null && powerups.style.setProperty('display', /^(antigravity|bo(mb|ost)|checkpoint|g(oal|ravity)|slow-mo|teleporter)$/i.test(this.selected) ? 'contents' : 'none');
+		// const powerups = this.scene.parent.gui.querySelector('#powerups');
+		// powerups !== null && powerups.style.setProperty('display', /^(antigravity|bo(mb|ost)|checkpoint|g(oal|ravity)|slow-mo|teleporter)$/i.test(this.selected) ? 'contents' : 'none');
 
-		let settings = document.querySelector('bhr-game-toolbar #tool-settings');
-		settings !== null && (settings.style.setProperty('display', /^(brush|camera|circle|eraser)$/i.test(this.selected) ? 'contents' : 'none'),
+		let settings = this.scene.parent.gui.querySelector('.toolbar #tool-settings');
+		settings.style.setProperty('display', /^(brush|camera|circle|eraser)$/i.test(this.selected) ? 'contents' : 'none'),
 		settings = settings.querySelector('div[data-id=eraser]'),
-		settings !== null && settings.style.setProperty('display', this.selected == 'eraser' ? 'contents' : 'none'));
+		settings.style.setProperty('display', this.selected == 'eraser' ? 'contents' : 'none');
 
-		let tool = document.querySelector(`.toolbar-item${style ? '.scenery' : ''}.${name} > input[type=radio]`);
-		tool !== null && (tool.checked = true);
+		const tool = this.scene.parent.gui.querySelector(`.toolbar-item${style ? '.scenery' : ''}.${name} > input[type=radio]`);
+		tool !== null && tool.checked !== true && (tool.checked = true);
 
-		this.scene.parent.canvas.style.setProperty('cursor', name == 'camera' ? 'move' : 'none');
+		const cursor = this.currentTool.constructor.cursor || (['brush', 'circle', 'curve', 'ellipse', 'rectangle', 'select'].includes(this.selected) ? Line.cursor : null);
+		if (cursor === Line.cursor) {
+			const theme = this.scene.parent.settings.theme
+				, physics = '#'.padEnd(7, /^dark$/i.test(theme) ? 'fb' : /^midnight$/i.test(theme) ? 'c' : '0')
+				, scenery = '#'.padEnd(7, /^(dark|midnight)$/i.test(theme) ? '6' : 'a');
+			cursor.stroke = style ? scenery : physics;
+		}
+
+		this._setCursor(cursor || 'none');
 	}
 
-	scroll(event) {
-		this.currentTool.scroll(event);
+	scroll() {
+		this.currentTool.scroll(...arguments);
 	}
 
 	press(event) {
-		this.currentTool.press(event);
-		this.scene.parent.container.classList.add('pointer-down');
+		this.currentTool.press(...arguments);
+		event.button === 0 && this.scene.parent.container.classList.add('pointer-down');
 	}
 
-	stroke(event) {
-		this.currentTool.stroke(event);
+	stroke() {
+		this.currentTool.stroke(...arguments);
 	}
 
 	clip(event) {
-		this.currentTool.clip(event);
-		this.scene.parent.container.classList.remove('pointer-down');
+		this.currentTool.clip(...arguments);
+		event.button === 0 && this.scene.parent.container.classList.remove('pointer-down');
 	}
 
 	update() {
@@ -93,17 +100,16 @@ export default class {
 
 	draw(ctx) {
 		this.currentTool.draw(ctx);
-		if (/^(brush|circle|curve|ellipse|line|rectangle|select)$/i.test(this.selected)) {
-			let position = this.scene.parent.mouse.rawPosition;
-			ctx.beginPath()
-			ctx.moveTo(position.x - 10 * window.devicePixelRatio, position.y)
-			ctx.lineTo(position.x + 10 * window.devicePixelRatio, position.y)
-			ctx.moveTo(position.x, position.y + 10 * window.devicePixelRatio)
-			ctx.lineTo(position.x, position.y - 10 * window.devicePixelRatio)
-			ctx.save()
-			ctx.lineWidth = 2 * window.devicePixelRatio
-			ctx.stroke()
-			ctx.restore();
-		}
+		if (!this.scene.parent.mouse.locked) return;
+		const position = this.scene.parent.mouse.rawPosition;
+		ctx.beginPath()
+		ctx.moveTo(position.x - 10 * window.devicePixelRatio, position.y)
+		ctx.lineTo(position.x + 10 * window.devicePixelRatio, position.y)
+		ctx.moveTo(position.x, position.y + 10 * window.devicePixelRatio)
+		ctx.lineTo(position.x, position.y - 10 * window.devicePixelRatio)
+		ctx.save()
+		ctx.lineWidth = 2 * window.devicePixelRatio
+		ctx.stroke()
+		ctx.restore();
 	}
 }

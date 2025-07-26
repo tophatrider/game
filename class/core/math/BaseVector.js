@@ -1,15 +1,22 @@
 export default class BaseVector {
-	constructor(x = 0, y = 0) {
+	constructor(x = 0, y = 0, normalize = false) {
 		if (typeof x == 'object') {
-			if (x instanceof Array)
-				return new this.constructor(...x);
-
-			y = x.y || x[1];
-			x = x.x || x[0];
+			normalize = y;
+			if (x instanceof Array) {
+				[x, y] = x;
+			} else {
+				y = x.y || x[1];
+				x = x.x || x[0];
+			}
 		}
 
 		this.x = parseFloat(x) || 0;
 		this.y = parseFloat(y) || 0;
+		if (normalize) {
+			const dpr = window.devicePixelRatio;
+			this.x *= dpr;
+			this.y *= dpr;
+		}
 	}
 
 	get length() {
@@ -45,16 +52,24 @@ export default class BaseVector {
 		return len > 0 ? new this.constructor(this.x / len, this.y / len) : this.clone();
 	}
 
-	clone() {
-		return new this.constructor(this.x, this.y);
+	clone(...args) {
+		return new this.constructor(this.x, this.y, ...args);
 	}
 
 	toArray() {
 		return [this.x, this.y];
 	}
 
+	toCanvas(canvas) {
+		return this.constructor.from(Math.round((this.x - canvas.width / 2) / window.game.scene.zoom + window.game.scene.camera.x), Math.round((this.y - canvas.height / 2) / window.game.scene.zoom + window.game.scene.camera.y));
+	}
+
 	toJSON() {
 		return { x: this.x, y: this.y };
+	}
+
+	toPixel(game = window.game) {
+		return this.constructor.from((this.x - game.scene.camera.x) * game.scene.zoom + game.canvas.width / 2, (this.y - game.scene.camera.y) * game.scene.zoom + game.canvas.height / 2);
 	}
 
 	toString() {
@@ -63,6 +78,10 @@ export default class BaseVector {
 
 	static from() {
 		return new this(...arguments);
+	}
+
+	static fromScreen(...args) {
+		return new this(...args, true);
 	}
 
 	static isVector(obj) {

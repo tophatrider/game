@@ -76,10 +76,20 @@ div#game-container .replay-progress {
 	width: auto;
 }
 
-div#game-container .replay-progress:hover {
-	cursor: pointer;
-	filter: brightness(1.25);
-	height: 6px;
+@media (hover:hover) {
+	div#game-container .replay-progress:hover {
+		cursor: pointer;
+		filter: brightness(1.25);
+		height: 6px;
+	}
+}
+
+@media (hover:none) {
+	div#game-container .replay-progress:active {
+		cursor: pointer;
+		filter: brightness(1.25);
+		height: 6px;
+	}
 }
 
 div#game-container .replay-progress::-webkit-progress-value {
@@ -190,10 +200,16 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	user-select: none;
 }
 
-.bhr-game-overlay nav>label:hover {
-	/* background-color: hsl(0deg 0% 50% / 20%); */
-	background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
-	/* cursor: pointer; */
+@media (hover:hover) {
+	.bhr-game-overlay nav>label:hover {
+		/* background-color: hsl(0deg 0% 50% / 20%); */
+		background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
+		/* cursor: pointer; */
+	}
+}
+
+@media (hover:none) {
+	.bhr-game-overlay nav>label:active { background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier))) }
 }
 
 .bhr-game-overlay:has(input[type="radio"]#track:checked) nav>label[for="track"],
@@ -285,12 +301,14 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	padding: 0.25rem .5rem;
 }
 
-.bhr-game-overlay button:hover {
-	filter: brightness(calc(1 + .2 * var(--brightness-multiplier)));
+@media (hover:hover) {
+	.bhr-game-overlay button:hover { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+	.toast button:hover { backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 }
 
-.toast button:hover {
-	backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier)));
+@media (hover:none) {
+	.bhr-game-overlay button:active { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+	.toast button:active { backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 }
 
 .disabled,
@@ -301,9 +319,7 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	pointer-events: none;
 }
 
-.timebar:not(:hover)::-webkit-slider-thumb {
-	visibility: hidden;
-}
+.timebar:not(:hover)::-webkit-slider-thumb { visibility: hidden }
 
 textarea {
 	/* background-color: hsl(0deg 0% 50% / 20%); */
@@ -321,71 +337,4 @@ textarea {
 	display: grid;
 	grid-gap: 0.125rem;
 	width: -webkit-fill-available;
-}
-
-window-frame {
-	background-color: var(--background-color);
-	color: #80808080;
-	display: grid;
-	grid-template-columns: 1fr auto;
-	position: relative;
-	user-select: none;
-	-webkit-user-select: none;
-	-webkit-app-region: drag;
-}
-
-window-frame label {
-	font-size: 10px;
-	padding: 0 4px;
-	position: relative;
-	-webkit-app-region: no-drag;
-}
-
-window-frame label:hover {
-	color: #808080ad;
-}
-
-window-frame div[data-position="left"]>* {
-	max-height: 1.25rem;
-	padding: 0.25rem;
-	vertical-align: middle;
-}
-
-window-frame div[data-position="right"] {
-	display: flex;
-	-webkit-app-region: no-drag;
-}
-
-window-frame button {
-	aspect-ratio: auto;
-	background-color: transparent;
-	border-radius: 0;
-	height: -webkit-fill-available;
-	padding: 0.25rem 1rem;
-	position: relative;
-	vertical-align: middle;
-}
-
-window-frame button:hover {
-	background-color: #80808030;
-	color: var(--text-color);
-}
-
-window-frame button:hover:active {
-	background-color: #80808050;
-}
-
-window-frame button#maximize[title="Restore"]::before {
-	content: "▢";
-	position: absolute;
-	top: 6px;
-	left: 14px;
-}
-
-window-frame button#close:hover {
-	background-color: #ff0000dd;
-}
-
-window-frame button#close:hover:active {
-	background-color: #ff000090;
 }

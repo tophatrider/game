@@ -5,6 +5,30 @@ const canvas = document.querySelector('#view')
 
 Object.defineProperty(window, 'game', { value: game });
 
+game.on('playerFocusChange', function(player) {
+	const progress = this.gui.querySelector('.replay-progress');
+	if (!progress) return console.warn('Progress bar not found');
+	this.scene.cameraFocus === this.scene.firstPlayer.vehicle.hitbox ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
+	progress.setAttribute('max', player.runTime ?? 100),
+	progress.setAttribute('value', player.ticks));
+});
+
+game.on('replayAdd', function(player) {
+	const progress = this.gui.querySelector('.replay-progress');
+	if (!progress) return console.warn('Progress bar not found');
+	progress.style.removeProperty('display');
+	progress.setAttribute('max', player.runTime ?? 100);
+	progress.setAttribute('value', player.ticks);
+});
+
+game.on('reset', function() {
+	const progress = this.gui.querySelector('.replay-progress');
+	if (!progress) return console.warn('Progress bar not found');
+	this.scene.cameraFocus === this.scene.firstPlayer.vehicle.hitbox ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
+	progress.setAttribute('max', this.scene.cameraFocus.parent.player.runTime ?? 100),
+	progress.setAttribute('value', this.scene.cameraFocus.parent.player.ticks));
+});
+
 game.on('stateChange', function(paused) {
 	// container shadow root
 	const playPauseButton = document.querySelector('.playpause > input');

@@ -3,133 +3,132 @@ self.powerups = {};
 self.rows = new Map();
 addEventListener('message', ({ data }) => {
 	switch(data.cmd) {
-		case 'CREATE_SECTOR': {
-			let sector = self.sector(data.row, data.column, {
-				width: data.width,
-				height: data.height
-			});
-			// console.log(sector)
-			break;
+	case 'CREATE_SECTOR': {
+		let sector = self.sector(data.row, data.column, {
+			width: data.width,
+			height: data.height
+		});
+		// console.log(sector)
+		break;
+	}
+
+	case 'CACHE_SECTOR': {
+		// let sector = self.sector(data.row, data.column);
+		// sector.ctx.clearRect(0, 0, sector.width, sector.height);
+		// sector.ctx.strokeStyle = '#000';
+		// for (const line of data.physics) {
+		// 	sector.ctx.beginPath();
+		// 	sector.ctx.moveTo(line.start.x, line.start.y);
+		// 	sector.ctx.lineTo(line.end.x, line.end.y);
+		// 	sector.ctx.stroke();
+		// }
+
+		// sector.ctx.strokeStyle = '#aaa';
+		// for (const line of data.scenery) {
+		// 	sector.ctx.beginPath();
+		// 	sector.ctx.moveTo(line.start.x, line.start.y);
+		// 	sector.ctx.lineTo(line.end.x, line.end.y);
+		// 	sector.ctx.stroke();
+		// }
+
+		// self.postMessage({
+		// 	event: 'SECTOR_CACHED',
+		// 	row: data.row,
+		// 	column: data.column,
+		// 	image: sector.transferToImageBitmap()
+		// });
+		self.cacheSector(data.row, data.column, data);
+
+		// self.postMessage({
+		// 	event: 'SECTOR_CACHED',
+		// 	row: data.row,
+		// 	column: data.column
+		// 	// image: ctx.canvas.transferToImageBitmap()
+		// });
+		break;
+	}
+
+	case 'INIT_SECTOR': {
+		if (!self.rows.has(data.row)) {
+			self.rows.set(data.row, new Map());
 		}
+	
+		const row = self.rows.get(data.row);
+		const ctx = data.offscreen.getContext('2d');
+		ctx.canvas.width = data.size;
+		ctx.canvas.height = data.size;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.strokeWidth = data.lineWidth;
+		ctx.strokeStyle = data.strokeStyle;
+		row.set(data.column, ctx);
+		// console.log(data)
+		break;
+	}
 
-		case 'CACHE_SECTOR': {
-			// let sector = self.sector(data.row, data.column);
-			// sector.ctx.clearRect(0, 0, sector.width, sector.height);
-			// sector.ctx.strokeStyle = '#000';
-			// for (const line of data.physics) {
-			// 	sector.ctx.beginPath();
-			// 	sector.ctx.moveTo(line.start.x, line.start.y);
-			// 	sector.ctx.lineTo(line.end.x, line.end.y);
-			// 	sector.ctx.stroke();
-			// }
-
-			// sector.ctx.strokeStyle = '#aaa';
-			// for (const line of data.scenery) {
-			// 	sector.ctx.beginPath();
-			// 	sector.ctx.moveTo(line.start.x, line.start.y);
-			// 	sector.ctx.lineTo(line.end.x, line.end.y);
-			// 	sector.ctx.stroke();
-			// }
-
-			// self.postMessage({
-			// 	event: 'SECTOR_CACHED',
-			// 	row: data.row,
-			// 	column: data.column,
-			// 	image: sector.transferToImageBitmap()
-			// });
-			self.cacheSector(data.row, data.column, data);
-
-			// self.postMessage({
-			// 	event: 'SECTOR_CACHED',
-			// 	row: data.row,
-			// 	column: data.column
-			// 	// image: ctx.canvas.transferToImageBitmap()
-			// });
-			break;
-		}
-
-		case 'INIT_SECTOR': {
-			if (!self.rows.has(data.row)) {
-				self.rows.set(data.row, new Map());
-			}
-		
-			const row = self.rows.get(data.row);
-			const ctx = data.offscreen.getContext('2d');
+	case 'RESIZE_SECTOR': {
+		const ctx = self.rows.get(data.row)?.get(data.column);
+		if (ctx) {
 			ctx.canvas.width = data.size;
 			ctx.canvas.height = data.size;
 			ctx.lineCap = 'round';
 			ctx.lineJoin = 'round';
 			ctx.strokeWidth = data.lineWidth;
 			ctx.strokeStyle = data.strokeStyle;
-			row.set(data.column, ctx);
-			// console.log(data)
-			break;
+			self.cacheSector(data.row, data.column);
 		}
+		break;
+	}
 
-		case 'RESIZE_SECTOR': {
-			const ctx = self.rows.get(data.row)?.get(data.column);
-			if (ctx) {
-				ctx.canvas.width = data.size;
-				ctx.canvas.height = data.size;
-				ctx.lineCap = 'round';
-				ctx.lineJoin = 'round';
-				ctx.strokeWidth = data.lineWidth;
-				ctx.strokeStyle = data.strokeStyle;
-				self.cacheSector(data.row, data.column);
-			}
-			break;
-		}
+	case 'PARSE_TRACK': {
+		const [physics, scenery, powerups] = String(data.code).split('#');
+		physics && (self.lines['physics'] = parseLines(physics.split(/,+/g)));
+		scenery && (self.lines['scenery'] = parseLines(scenery.split(/,+/g), 1));
+		// if (!powerups) break;
+		// for (let powerup of powerups) {
+		// 	powerup = powerup.split(/\s+/g);
+		// 	let x = parseInt(powerup[1], 32);
+		// 	let y = parseInt(powerup[2], 32);
+		// 	let a = parseInt(powerup[3], 32);
+		// 	switch (powerup[0]) {
+		// 		case 'T':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Target', args: [x, y] });
+		// 			break;
 
-		case 'PARSE_TRACK': {
-			const [physics, scenery, powerups] = String(data.code).split('#');
-			physics && (self.lines['physics'] = parseLines(physics.split(/,+/g)));
-			scenery && (self.lines['scenery'] = parseLines(scenery.split(/,+/g), 1));
-			// if (!powerups) break;
-			// for (let powerup of powerups) {
-			// 	powerup = powerup.split(/\s+/g);
-			// 	let x = parseInt(powerup[1], 32);
-			// 	let y = parseInt(powerup[2], 32);
-			// 	let a = parseInt(powerup[3], 32);
-			// 	switch (powerup[0]) {
-			// 		case 'T':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Target', args: [x, y] });
-			// 			break;
+		// 		case 'C':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Checkpoint', args: [x, y] });
+		// 			break;
 
-			// 		case 'C':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Checkpoint', args: [x, y] });
-			// 			break;
+		// 		case 'B':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Boost', args: [x, y, a + 180] });
+		// 			break;
 
-			// 		case 'B':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Boost', args: [x, y, a + 180] });
-			// 			break;
+		// 		case 'G':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Gravity', args: [x, y, a + 180] });
+		// 			break;
 
-			// 		case 'G':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Gravity', args: [x, y, a + 180] });
-			// 			break;
+		// 		case 'O':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Bomb', args: [x, y] });
+		// 			break;
 
-			// 		case 'O':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Bomb', args: [x, y] });
-			// 			break;
+		// 		case 'S':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Slowmo', args: [x, y] });
+		// 			break;
 
-			// 		case 'S':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Slowmo', args: [x, y] });
-			// 			break;
+		// 		case 'A':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Antigravity', args: [x, y] });
+		// 			break;
 
-			// 		case 'A':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Antigravity', args: [x, y] });
-			// 			break;
+		// 		case 'W':
+		// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Teleporter', args: [x, y, a, parseInt(powerup[4], 32)] });
+		// 			break;
+		// 	}
+		// }
+		break;
+	}
 
-			// 		case 'W':
-			// 			self.postMessage({ cmd: 'ADD_POWERUP', type: 'Teleporter', args: [x, y, a, parseInt(powerup[4], 32)] });
-			// 			break;
-			// 	}
-			// }
-			break;
-		}
-
-		case 'ADD_LINE': {
-			break;
-		}
+	case 'ADD_LINE':
+		break;
 	}
 });
 
