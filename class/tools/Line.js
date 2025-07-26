@@ -15,8 +15,8 @@ export default class extends Tool {
 	clip(event, pointer) {
 		if (!this.anchors.has(pointer.id)) return;
 		const anchor = this.anchors.get(pointer.id);
-		this.scene.addLine(anchor, this.mouse.position, this.scenery);
-		this.old = this.mouse.position.toStatic();
+		this.scene.addLine(anchor, pointer.position, this.scenery);
+		this.old = pointer.position.toStatic();
 		this.anchors.delete(pointer.id);
 	}
 
