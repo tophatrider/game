@@ -33,6 +33,8 @@ canvas#view {
 	width: 100% !important;
 }
 
+@media (orientation: landscape) { /* show mobile controls?*/ }
+
 div#game-container {
 	position: relative;
 	margin: auto;
@@ -92,13 +94,8 @@ div#game-container .replay-progress {
 	}
 }
 
-div#game-container .replay-progress::-webkit-progress-value {
-	background: var(--border-color);
-}
-
-div#game-container .replay-progress::-webkit-progress-bar {
-	background: var(--background-color);
-}
+div#game-container .replay-progress::-webkit-progress-value { background: var(--border-color) }
+div#game-container .replay-progress::-webkit-progress-bar { background: var(--background-color) }
 
 .bhr-dialog {
 	backdrop-filter: blur(1rem) brightness(0.75);
@@ -160,7 +157,7 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	width: 100%;
 }
 
-.bhr-game-overlay {
+.game-overlay {
 	align-items: center;
 	backdrop-filter: blur(.75rem) brightness(calc(.75 - .1 * var(--brightness-multiplier)));
 	display: flex;
@@ -172,7 +169,7 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	visibility: hidden;
 }
 
-.bhr-game-overlay nav {
+.game-overlay nav {
 	display: grid;
 	font-family: fantasy;
 	font-size: clamp(8px, 2cqw, 1rem);
@@ -185,7 +182,7 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	width: 100vmin;
 }
 
-.bhr-game-overlay nav>label {
+.game-overlay nav>label {
 	-webkit-user-select: none;
 	/* background-color: hsl(0deg 0% 50% / 8%); */
 	/* border: none; */
@@ -201,7 +198,7 @@ div#game-container .replay-progress::-webkit-progress-bar {
 }
 
 @media (hover:hover) {
-	.bhr-game-overlay nav>label:hover {
+	.game-overlay nav>label:hover {
 		/* background-color: hsl(0deg 0% 50% / 20%); */
 		background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
 		/* cursor: pointer; */
@@ -209,19 +206,19 @@ div#game-container .replay-progress::-webkit-progress-bar {
 }
 
 @media (hover:none) {
-	.bhr-game-overlay nav>label:active { background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier))) }
+	.game-overlay nav>label:active { background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier))) }
 }
 
-.bhr-game-overlay:has(input[type="radio"]#track:checked) nav>label[for="track"],
-.bhr-game-overlay:has(input[type="radio"]#ghost:checked) nav>label[for="ghost"],
-.bhr-game-overlay:has(input[type="radio"]#recorder-toggle:checked) nav>label[for="recorder-toggle"],
-.bhr-game-overlay:has(input[type="radio"]#settings:checked) nav>label[for="settings"] {
+.game-overlay:has(input[type="radio"]#track:checked) nav>label[for="track"],
+.game-overlay:has(input[type="radio"]#ghost:checked) nav>label[for="ghost"],
+.game-overlay:has(input[type="radio"]#recorder-toggle:checked) nav>label[for="recorder-toggle"],
+.game-overlay:has(input[type="radio"]#settings:checked) nav>label[for="settings"] {
 	/* background-color: hsl(0deg 0% 40% / 40%); */
 	background-color: hsl(0deg 0% calc(30% - 15% * var(--brightness-multiplier)) / 50%);
 	opacity: 1;
 }
 
-.bhr-game-overlay>section {
+.game-overlay>section {
 	align-items: center;
 	display: none;
 	flex-direction: column;
@@ -235,14 +232,14 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	min-height: 50%;
 }
 
-.bhr-game-overlay section[title]::before {
+.game-overlay section[title]::before {
 	content: attr(title);
 	display: block;
 	font-weight: bold;
 	margin-bottom: .5rem;
 }
 
-.bhr-game-overlay input:is([type="number"],[type="text"]) {
+.game-overlay input:is([type="number"],[type="text"]) {
 	backdrop-filter: brightness(0.5);
 	background-color: transparent;
 	border: none;
@@ -262,7 +259,7 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	visibility: visible !important;
 }
 
-.bhr-game-overlay label:has(> input) {
+.game-overlay label:has(> input) {
 	-webkit-user-select: none;
 	align-items: center;
 	border-radius: .25rem;
@@ -275,11 +272,11 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	width: -webkit-fill-available;
 }
 
-.bhr-game-overlay label > input:nth-child(1) {
+.game-overlay label > input:nth-child(1) {
 	margin-left: 1rem;
 }
 
-.bhr-game-overlay button,
+.game-overlay button,
 .toast button {
 	-webkit-user-select: none;
 	border: none;
@@ -289,8 +286,8 @@ div#game-container .replay-progress::-webkit-progress-bar {
 	user-select: none;
 }
 
-.bhr-game-overlay button,
-.bhr-game-overlay label:has(> input) {
+.game-overlay button,
+.game-overlay label:has(> input) {
 	/* background-color: hsl(0deg 0% 40% / 60%); */
 	background-color: hsl(0deg 0% calc(40% - 20% * var(--brightness-multiplier)) / 50%);
 	padding: 0.5rem 1rem;
@@ -302,12 +299,12 @@ div#game-container .replay-progress::-webkit-progress-bar {
 }
 
 @media (hover:hover) {
-	.bhr-game-overlay button:hover { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+	.game-overlay button:hover { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 	.toast button:hover { backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 }
 
 @media (hover:none) {
-	.bhr-game-overlay button:active { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+	.game-overlay button:active { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 	.toast button:active { backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 }
 
@@ -333,7 +330,7 @@ textarea {
 	resize: none;
 }
 
-.bhr-game-overlay>section:has(> #settings)>section {
+.game-overlay>section:has(> #settings)>section {
 	display: grid;
 	grid-gap: 0.125rem;
 	width: -webkit-fill-available;

@@ -11,7 +11,7 @@
 <body>
 	<div id="game-container">
 		<canvas id="view"></canvas>
-		<div class="bhr-game-overlay" style="display: none;">
+		<div class="game-overlay" style="display: none;">
 			<input type="checkbox" id="game-overlay" hidden>
 			<nav>
 				<!-- Track upload tab -->
@@ -22,7 +22,7 @@
 				<label class="ripple" for="debug">Debug</label>
 			</nav>
 			<section>
-				<input type="radio" name="bhr-game-overlay-nav" id="track" hidden checked>
+				<input type="radio" name="game-overlay-nav" id="track" hidden checked>
 				<div style="display: grid;grid-gap: .125rem;grid-template-columns: repeat(auto-fit, minmax(25vmin, 1fr));">
 					<!-- Toggle move/edit mode button -->
 					<label>Transform Mode<input type="checkbox" onchange="game.scene.transformMode = event.target.checked"></label>
@@ -170,7 +170,7 @@
 				</dialog>
 			</section>
 			<section style="display: none;">
-				<input type="radio" name="bhr-game-overlay-nav" id="ghost" hidden>
+				<input type="radio" name="game-overlay-nav" id="ghost" hidden>
 				<!-- Display races (game.scene.races/game.scene.players/game.scene.ghosts) -->
 				<div style="display: grid;grid-gap: .125rem;grid-template-columns: repeat(auto-fit, minmax(25vmin, 1fr));">
 					<button onclick="game.scene.ghosts.splice(0);" style="background-color: hsl(0deg 40% 40% / calc(50% + 10% * var(--brightness-multiplier)));">Clear</button>
@@ -211,7 +211,7 @@
 				</dialog>
 			</section>
 			<section style="display: none;">
-				<input type="radio" name="bhr-game-overlay-nav" id="recorder-toggle" hidden>
+				<input type="radio" name="game-overlay-nav" id="recorder-toggle" hidden>
 				<button style="width: -webkit-fill-available;" onclick="game.createRecorder(blobURL => (download.href = blobURL) && loadrecording.showModal()).start(),recorder.style.removeProperty('display'),document.querySelector('#game-overlay').checked = false" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()">Start Recorder</button>
 				<label>FPS&emsp;<input type="number" min="10" max="300" step="10" value="50"></label>
 				<button style="width: -webkit-fill-available;" disabled><a download="bhr_recording" id="adownload">Download</a></button>
@@ -225,7 +225,7 @@
 				</dialog>
 			</section>
 			<section style="display: none;gap: 1rem;">
-				<input type="radio" name="bhr-game-overlay-nav" id="settings" hidden>
+				<input type="radio" name="game-overlay-nav" id="settings" hidden>
 				<!-- Add section for Discord RPC -->
 				<section title="Editor">
 					<label>Auto save<input type="checkbox" id="auto-save" onchange="game.settings.autoSave = event.target.checked;"></label>
@@ -246,7 +246,7 @@
 				</section>
 			</section>
 			<section style="display: none;gap: 1rem;">
-				<input type="radio" name="bhr-game-overlay-nav" id="debug" hidden>
+				<input type="radio" name="game-overlay-nav" id="debug" hidden>
 				<label>Display FPS<input type="checkbox" id="display-fps" onchange="game.settings.displayFPS = event.target.checked"></label>
 			</section>
 			<button id="exit" style="margin: 1rem;max-width: 25vmin;" onclick="window.close()">Exit to desktop</button>
@@ -255,11 +255,11 @@
 	</div>
 	<script type="module" src="bootstrap.js"></script>
 	<script type="module">
-		// const demo = await fetch('demo.txt').then(r => r.text());
-		// game.once('load', async function() {
-		// 	const demoGhost = await fetch('demoghost.txt').then(r => r.text());
-		// 	this.scene.watchGhost(demoGhost);
-		// });
+		// const demo = await fetch('demo/track.txt').then(r => r.text());
+		// // game.once('load', async function() {
+		// // 	const demoGhost = await fetch('demo/ghost.txt').then(r => r.text());
+		// // 	this.scene.watchGhost(demoGhost);
+		// // });
 		// game.init({ code: demo, write: true });
 		game.init({ default: true, write: true });
 	</script>

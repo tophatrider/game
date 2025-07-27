@@ -27,4 +27,9 @@ export default class EventRelay extends EventEmitter {
 			target.removeEventListener(event, listener);
 		this.#handlers.splice(0);
 	}
+
+	dispose() {
+		this.unlisten();
+		super.dispose();
+	}
 }

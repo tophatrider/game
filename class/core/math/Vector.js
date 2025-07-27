@@ -4,26 +4,36 @@ import StaticVector from "./StaticVector.js";
 export default class Vector extends BaseVector {
 	static Static = StaticVector;
 
-	set(v, normalize = false) {
-		this.x = v.x;
-		this.y = v.y;
-		normalize && this.scaleSelf(window.devicePixelRatio);
+	applyPixelRatio(pixelRatio = window.devicePixelRatio) {
+		return this.scaleSelf(pixelRatio);
+	}
+
+	set() {
+		const [x, y, normalize = false] = this.constructor.parseArgs(...arguments);
+		this.x = x;
+		this.y = y;
+		normalize && this.applyPixelRatio();
 		return this;
 	}
 
-	add(v) {
-		this.x += v.x;
-		this.y += v.y;
+	add() {
+		const [x, y, normalize = false] = this.constructor.parseArgs(...arguments);
+		this.x += x;
+		this.y += y;
+		normalize && this.applyPixelRatio();
 		return this;
 	}
 
-	sub(v) {
-		this.x -= v.x;
-		this.y -= v.y;
+	sub() {
+		const [x, y, normalize = false] = this.constructor.parseArgs(...arguments);
+		this.x -= x;
+		this.y -= y;
+		normalize && this.applyPixelRatio();
 		return this;
 	}
 
-	scaleSelf(factor) {
+	scaleSelf(factor, normalize = false) {
+		normalize && (factor *= window.devicePixelRatio);
 		this.x *= factor;
 		this.y *= factor;
 		return this;
@@ -70,5 +80,21 @@ export default class Vector extends BaseVector {
 
 	toStatic() {
 		return StaticVector.from(this);
+	}
+
+	static parseArgs(x, y, normalize) {
+		if (typeof x == 'object') {
+			typeof y == 'boolean' && (normalize = y);
+			if (x instanceof Array) {
+				[x, y] = x;
+			} else {
+				y = x.y || x[1];
+				x = x.x || x[0];
+			}
+		}
+
+		x = parseFloat(x) || 0;
+		y = parseFloat(y) || 0;
+		return [x, y, normalize];
 	}
 }

@@ -1,4 +1,4 @@
-import Player from "../player/Player.js";
+import ClientPlayer from "../player/ClientPlayer.js";
 import GhostPlayer from "../player/GhostPlayer.js";
 
 import ToolHandler from "../handler/Tool.js";
@@ -127,7 +127,7 @@ export default class {
 		clearInterval(this.processingTimeout);
 		clearInterval(this.sprocessingTimeout);
 		this.dispose();
-		this.players.push(new Player(this, { vehicle: options.vehicle }));
+		this.players.push(new ClientPlayer(this, { vehicle: options.vehicle }));
 		this.processing = false;
 		this.progress = this.sprogress = 100;
 		this.editMode = options.write ?? this.editMode;

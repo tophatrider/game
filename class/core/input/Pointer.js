@@ -24,10 +24,10 @@ export default class Pointer {
 	_update(event, target) {
 		this.old = this.position.toStatic();
 		if (this.locked) {
-			this.raw.add(new Vector(event.movementX, event.movementY, true));
+			this.raw.add(event.movementX, event.movementY, true);
 			this.down || (this.initial = this.raw.toStatic());
 		} else {
-			this.raw.set(new Vector(event.offsetX, event.offsetY, true));
+			this.raw.set(event.offsetX, event.offsetY, true);
 		}
 
 		this.position.set(this.raw.toCanvas(target));

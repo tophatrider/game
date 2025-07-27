@@ -8,6 +8,9 @@ export default class {
 	rendered = false;
 	canvas = document.createElement('canvas');
 	ctx = this.canvas.getContext('2d');
+	// Experiment
+	// physicsPath = new Path2D();
+	// sceneryPath = new Path2D();
 	constructor(parent, row, column) {
 		this.parent = parent;
 		this.row = row;
@@ -57,6 +60,13 @@ export default class {
 	}
 
 	cache(offsetX = this.row * this.parent.scale, offsetY = this.column * this.parent.scale) {
+		// experiment
+		// this.physicsPath = new Path2D();
+		// this.sceneryPath = new Path2D();
+
+		// const normalizeX = c => (c - offsetX) * this.parent.scene.zoom
+		// 	, normalizeY = c => (c - offsetY) * this.parent.scene.zoom;
+
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		if (this.scenery.length > 0) {
 			let strokeStyle = this.ctx.strokeStyle;
@@ -70,6 +80,13 @@ export default class {
 		for (const line of this.physics)
 			line.draw(this.ctx, offsetX, offsetY);
 
+		// Experiment
+		// for (const line of this.physics) {
+		// 	this.physicsPath.moveTo(normalizeX(line.a.x), normalizeY(line.a.y));
+		// 	this.physicsPath.lineTo(normalizeX(line.b.x), normalizeY(line.b.y));
+		// }
+
+		// this.ctx.stroke(this.physicsPath);
 		this.rendered = true;
 	}
 

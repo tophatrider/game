@@ -1,9 +1,9 @@
 import RecursiveProxy from "./core/utils/RecursiveProxy.js";
 import EventRelay from "./core/EventRelay.js";
 import Events from "./core/Events.js";
-import Scene from "./scenes/Scene.js";
-import Mouse from "./core/input/EnhancedPointerHandler.js";
+import PointerHandler from "./core/input/PointerHandler.js";
 import Vector from "./core/math/Vector.js";
+import Scene from "./scenes/Scene.js";
 import TrackStorage from "./TrackStorage.js";
 import { DEFAULTS } from "./core/constants.js";
 
@@ -26,13 +26,13 @@ export default class Game extends EventRelay {
 	stats = { fps: 0, ups: 0 };
 
 	accentColor = '#000000'; // for themes
-	mouse = new Mouse();
+	mouse = new PointerHandler();
 	scene = new Scene(this);
 	settings = new RecursiveProxy(Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('bhr-settings'), defaultsFilter)), {
 		set: (...args) => {
 			Reflect.set(...args);
 			localStorage.setItem('bhr-settings', JSON.stringify(this.settings, defaultsFilter));
-			this.emit(Events.SettingsChange, this.settings);
+			this._handleSettingsChange(this.settings);
 			return true;
 		},
 		deleteProperty() {
@@ -48,6 +48,7 @@ export default class Game extends EventRelay {
 		Object.defineProperties(this, {
 			_frameInterval: { value: 1e3 / this.config.maxFrameRate, writable: true },
 			_progress: { value: 0, writable: true },
+			_resizeObserver: { value: new ResizeObserver(this.setCanvasSize.bind(this)), writable: true },
 			_updateInterval: { value: 1e3 / this.config.tickRate, writable: true },
 			_wasPaused: { value: null, writable: true }
 		});
@@ -59,71 +60,49 @@ export default class Game extends EventRelay {
 		this.mouse.on('up', this._handlePointerUp.bind(this));
 		this.mouse.on('wheel', this._handleScroll.bind(this));
 
-		this.on(Events.SettingsChange, settings => {
-			let element;
-			for (const setting in settings) {
-				const value = settings[setting];
-				switch (setting) {
-				case 'theme':
-					let stylesheet = document.querySelector('#game-theme'), href;
-					if (stylesheet && (href = stylesheet.href.replace(/[^/]*(\.css)$/, `${value}$1`)) && href !== stylesheet.href) {
-						stylesheet.setAttribute('href', href);
-						this.ctx.fillStyle = '#'.padEnd(7, value == 'dark' ? 'fb' : value == 'midnight' ? 'c' : '0');
-						this.ctx.strokeStyle = this.ctx.fillStyle;
-						this.scene.grid.sectors.forEach(sector => sector.resize());
-					}
+		// this._handleSettingsChange(this.settings);
+		// this.trackStorage.on('open', async () => {
+		// 	if (!this.settings.autoSave) return;
+		// 	await this.trackStorage.open('savedState', { cache: true });
+		// 	if (this.settings.autoSaveInterval > 0) {
+		// 		const date = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium' }).format().replace(/[/\\?%*:|"<>]/g, '-').replace(/,+\s*/, '_').replace(/\s+.*$/, '');
+		// 		this.trackStorage.open(date, { overwrite: false });
+		// 		setInterval(() => {
+		// 			this.trackStorage.write(date, this.scene.toString(), { saveAndReplace: true });
+		// 		}, this.settings.autoSaveInterval * 1e3);
+		// 	}
 
-					(element = document.getElementById(value)) && (element.checked = true);
-					break;
-				default:
-					if (typeof value != 'boolean') continue;
-					(element = document.getElementById(setting.replace(/([A-Z])/g, '-$1').toLowerCase())) && (element.checked = value);
-				}
-			}
-		});
-		this.emit(Events.SettingsChange, this.settings);
-		this.trackStorage.on('open', async () => {
-			if (!this.settings.autoSave) return;
-			await this.trackStorage.open('savedState', { cache: true });
-			if (this.settings.autoSaveInterval > 0) {
-				const date = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium' }).format().replace(/[/\\?%*:|"<>]/g, '-').replace(/,+\s*/, '_').replace(/\s+.*$/, '');
-				this.trackStorage.open(date, { overwrite: false });
-				setInterval(() => {
-					this.trackStorage.write(date, this.scene.toString(), { saveAndReplace: true });
-				}, this.settings.autoSaveInterval * 1e3);
-			}
-
-			// Only show toast if the game wasn't closed properly!
-			// if ('toasts' in window) {
-			// 	const toast = Object.assign(document.createElement('div'), {
-			// 		className: 'toast',
-			// 		innerText: 'Would you like to restore the track you were last working on? '
-			// 	});
-			// 	toast.append(Object.assign(document.createElement('button'), {
-			// 		innerText: 'Yes',
-			// 		onclick: () => {
-			// 			toast.remove();
-			// 			fileData.text().then(code => {
-			// 				this.init();
-			// 				this.scene.read(code);
-			// 			});
-			// 			// fileHandle.createWritable()
-			// 		}
-			// 	}), Object.assign(document.createElement('button'), {
-			// 		innerText: 'No',
-			// 		onclick: () => toast.remove()
-			// 	}));
-			// 	this.constructor.serveToast(toast);
-			// }
-		});
+		// 	// Only show toast if the game wasn't closed properly!
+		// 	// if ('toasts' in window) {
+		// 	// 	const toast = Object.assign(document.createElement('div'), {
+		// 	// 		className: 'toast',
+		// 	// 		innerText: 'Would you like to restore the track you were last working on? '
+		// 	// 	});
+		// 	// 	toast.append(Object.assign(document.createElement('button'), {
+		// 	// 		innerText: 'Yes',
+		// 	// 		onclick: () => {
+		// 	// 			toast.remove();
+		// 	// 			fileData.text().then(code => {
+		// 	// 				this.init();
+		// 	// 				this.scene.read(code);
+		// 	// 			});
+		// 	// 			// fileHandle.createWritable()
+		// 	// 		}
+		// 	// 	}), Object.assign(document.createElement('button'), {
+		// 	// 		innerText: 'No',
+		// 	// 		onclick: () => toast.remove()
+		// 	// 	}));
+		// 	// 	this.constructor.serveToast(toast);
+		// 	// }
+		// });
 
 		this.listen();
 	}
 
 	async _handleKeydown(event) {
-		event.preventDefault();
 		switch (event.key.toLowerCase()) {
 		case 'arrowleft': {
+			event.preventDefault();
 			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
 			if (focusedPlayerGhost) {
 				this.scene.paused = true;
@@ -134,6 +113,7 @@ export default class Game extends EventRelay {
 		}
 
 		case 'arrowright': {
+			event.preventDefault();
 			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
 			if (focusedPlayerGhost) {
 				this.scene.paused = true;
@@ -142,7 +122,8 @@ export default class Game extends EventRelay {
 			break;
 		}
 
-		case 'backspace': {
+		case 'backspace':
+			event.preventDefault();
 			if (event.shiftKey) {
 				this.scene.restoreCheckpoint();
 				break;
@@ -150,9 +131,8 @@ export default class Game extends EventRelay {
 
 			this.scene.removeCheckpoint();
 			break;
-		}
-
-		case 'enter': {
+		case 'enter':
+			event.preventDefault();
 			if (event.shiftKey) {
 				this.scene.restoreCheckpoint();
 				break;
@@ -160,9 +140,8 @@ export default class Game extends EventRelay {
 
 			this.scene.returnToCheckpoint();
 			break;
-		}
-
 		case 'tab': {
+			event.preventDefault();
 			let playersToFocus = Array(...this.scene.players, ...this.scene.ghosts).map(player => player.vehicle.hitbox);
 			let index = playersToFocus.indexOf(this.scene.cameraFocus) + 1;
 			if (playersToFocus.length <= index) {
@@ -179,14 +158,17 @@ export default class Game extends EventRelay {
 		}
 
 		case '-':
+			event.preventDefault();
 			this.scene.zoomOut();
 			break;
 		case '+':
 		case '=':
+			event.preventDefault();
 			this.scene.zoomIn();
 			break;
 		case 'p':
 		case ' ':
+			event.preventDefault();
 			this.scene.paused = !this.scene.paused || (this.scene.frozen = false),
 			this.emit(Events.StateChange, this.scene.paused);
 			// this.scene.discreteEvents.add((this.scene.paused ? 'UN' : '') + 'PAUSE');
@@ -195,10 +177,8 @@ export default class Game extends EventRelay {
 		if (!this.scene.editMode) return;
 		switch (event.key.toLowerCase()) {
 		case 'c': {
-			if (!event.ctrlKey || this.scene.toolHandler.selected != 'select') {
-				break;
-			}
-
+			event.preventDefault();
+			if (!event.ctrlKey || this.scene.toolHandler.selected != 'select') break;
 			const selectedCode = this.scene.toolHandler.currentTool.selected.toString();
 			// selectedCode.length > 3 && navigator.clipboard.writeText(selectedCode);
 			const type = 'text/plain';
@@ -207,37 +187,36 @@ export default class Game extends EventRelay {
 		}
 
 		case 'control':
+			event.preventDefault();
 			this.scene.toolHandler.ctrlKey = true;
 			break;
-		case 'delete': {
+		case 'delete':
+			event.preventDefault();
 			if (this.scene.toolHandler.selected != 'select') break;
 			this.scene.toolHandler.currentTool.deleteSelected();
 			break;
-		}
-
 		case 'shift':
+			event.preventDefault();
 			this.scene.toolHandler.shiftKey = true;
 			break;
 		case 'v': {
-			if (!event.ctrlKey) {
-				break;
-			}
+			// if (!event.ctrlKey) break;
 
-			const queryOpts = { name: 'clipboard-read', allowWithoutGesture: false };
-			const permissionStatus = await navigator.permissions.query(queryOpts).then(permissionStatus => {
-				permissionStatus.onchange = ({ target }) => {
-					target.state == 'granted' && navigator.clipboard.readText().then(console.log);
-				};
+			// const queryOpts = { name: 'clipboard-read', allowWithoutGesture: false };
+			// const permissionStatus = await navigator.permissions.query(queryOpts).then(permissionStatus => {
+			// 	permissionStatus.onchange = ({ target }) => {
+			// 		target.state == 'granted' && navigator.clipboard.readText().then(console.log);
+			// 	};
 
-				return permissionStatus.state;
-			});
+			// 	return permissionStatus.state;
+			// });
 
-			if (permissionStatus == 'deined') {
-				alert('NotAllowedError: Read permission denied.');
-				break;
-			}
+			// if (permissionStatus == 'deined') {
+			// 	alert('NotAllowedError: Read permission denied.');
+			// 	break;
+			// }
 
-			navigator.clipboard.readText().then(console.log).catch(alert);
+			// navigator.clipboard.readText().then(console.log).catch(alert);
 			break;
 		}
 
@@ -252,12 +231,15 @@ export default class Game extends EventRelay {
 		// }
 		// break;
 		case 'a':
+			event.preventDefault();
 			this.scene.toolHandler.setTool('brush', false);
 			break;
 		case 'o':
+			event.preventDefault();
 			event.ctrlKey && this.openFile({ multiple: event.shiftKey });
 			break;
-		case 'r': {
+		case 'r':
+			event.preventDefault();
 			if (event.ctrlKey) {
 				if (event.shiftKey) {
 					this.mediaRecorder.stop();
@@ -270,8 +252,8 @@ export default class Game extends EventRelay {
 				}
 			}
 			break;
-		}
-		case 's': {
+		case 's':
+			event.preventDefault();
 			if (event.ctrlKey) {
 				if (event.shiftKey) {
 					this.saveAs();
@@ -284,38 +266,39 @@ export default class Game extends EventRelay {
 
 			this.scene.toolHandler.setTool('brush', true);
 			break;
-		}
-
 		case 'q':
+			event.preventDefault();
 			this.scene.toolHandler.setTool('line', false);
 			break;
 		case 'w':
+			event.preventDefault();
 			this.scene.toolHandler.setTool('line', true);
 			break;
 		case 'e':
+			event.preventDefault();
 			this.scene.toolHandler.setTool('eraser');
 			break;
 		case 'r':
+			event.preventDefault();
 			this.scene.toolHandler.setTool(this.scene.toolHandler.selected != 'camera' ? 'camera' : this.scene.toolHandler.old);
 			break;
 		case 'z':
+			event.preventDefault();
 			event.ctrlKey && this.scene.history[(event.shiftKey ? 're' : 'un') + 'do']();
 		}
 	}
 
 	_handleKeyup(event) {
-		event.preventDefault();
 		switch (event.key.toLowerCase()) {
 		case 'b':
-			event.ctrlKey && this.scene.switchBike();
+			if (!event.ctrlKey) break;
+			event.preventDefault();
+			this.scene.switchBike();
 			break;
 		case 'f':
 		case 'f11':
+			event.preventDefault();
 			document.fullscreenElement ? document.exitFullscreen() : this.container.requestFullscreen();
-			break;
-		case 'escape':
-			const checkbox = this.container.querySelector('.bhr-game-overlay > input');
-			this.scene.paused = checkbox !== null && (checkbox.checked = !checkbox.checked);
 		}
 
 		if (!this.scene.editMode) return;
@@ -324,14 +307,13 @@ export default class Game extends EventRelay {
 			this.scene.toolHandler.ctrlKey = false;
 			break;
 		case 'g':
+			event.preventDefault();
 			this.gui.querySelector('.grid > input').checked = (this.scene.grid.size = 11 - this.scene.grid.size) > 1;
 			break;
 		case 'shift':
 			this.scene.toolHandler.shiftKey = false;
 		}
 	}
-
-	_handlePaste(event) {}
 
 	_handlePointerDown(event) {
 		if (this.scene.processing) return;
@@ -379,6 +361,20 @@ export default class Game extends EventRelay {
 		event.shiftKey || this.scene.toolHandler.clip(...arguments);
 	}
 
+	_handleSettingsChange() {
+		for (const setting in settings) {
+			const value = settings[setting];
+			switch (setting) {
+			case 'theme':
+				this.ctx.fillStyle = '#'.padEnd(7, value == 'dark' ? 'fb' : value == 'midnight' ? 'c' : '0');
+				this.ctx.strokeStyle = this.ctx.fillStyle;
+				this.scene.grid.sectors.forEach(sector => sector.resize());
+			}
+		}
+
+		this.emit(Events.SettingsChange, this.settings);
+	}
+
 	_handleScroll(event) {
 		if (!event.ctrlKey) {
 			this.scene.toolHandler.scroll(...arguments);
@@ -391,21 +387,13 @@ export default class Game extends EventRelay {
 	}
 
 	listen() {
-		super.listen(document, 'fullscreenchange', () => navigator.keyboard.lock(['Escape']));
+		this._resizeObserver.observe(this.canvas);
+		super.listen(document, 'fullscreenchange', () => navigator.keyboard.lock(['Escape']), { passive: true });
 		super.listen(document, 'keydown', this._handleKeydown.bind(this));
 		super.listen(document, 'keyup', this._handleKeyup.bind(this));
-		// super.listen(document, 'paste', this._handlePaste.bind(this));
-		super.listen(document, 'pointerlockchange', () => {
-			if (!document.pointerLockElement) {
-				const checkbox = this.container.querySelector('.bhr-game-overlay > input');
-				this.scene.paused = checkbox !== null && (checkbox.checked = !checkbox.checked);
-			}
-		});
 
-		'navigation' in window && super.listen(navigation, 'navigate', this.destroy.bind(this));		
+		'navigation' in window && super.listen(navigation, 'navigate', this.destroy.bind(this), { passive: true });		
 		super.listen(window, 'load', () => window.dispatchEvent(new Event('online')));
-		// new ResizeObserver(this.setCanvasSize.bind(this)).observe(this.canvas);
-		super.listen(window, 'resize', this.setCanvasSize.bind(this));
 		super.listen(window, 'beforeunload', async event => {
 			event.preventDefault();
 			event.returnValue = false;
@@ -684,9 +672,13 @@ export default class Game extends EventRelay {
 
 	destroy(event) {
 		cancelAnimationFrame(this.#lastFrame);
+		super.destroy();
 		this.mouse.close();
 		this.scene.destroy();
 		this.unlisten();
+		this._resizeObserver.disconnect();
+		this._resizeObserver = null;
+		this.canvas = null;
 	}
 
 	static serveToast(toast, timeout) {

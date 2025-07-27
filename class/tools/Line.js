@@ -13,11 +13,12 @@ export default class extends Tool {
 	old = null;
 	scenery = false;
 	clip(event, pointer) {
-		if (!this.anchors.has(pointer.id)) return;
-		const anchor = this.anchors.get(pointer.id);
+		if (!this.anchors.has(event.pointerId)) return;
+		const anchor = this.anchors.get(event.pointerId);
 		this.scene.addLine(anchor, pointer.position, this.scenery);
 		this.old = pointer.position.toStatic();
-		this.anchors.delete(pointer.id);
+		this.anchors.delete(event.pointerId);
+		this.anchors.size > 0 && (this.scene.cameraLock = true);
 	}
 
 	draw(ctx) {
@@ -56,10 +57,10 @@ export default class extends Tool {
 	press(event, pointer) {
 		// Disabled due to select-tool shortcut
 		// if (event.ctrlKey) {
-		// 	this.anchors.set(pointer.id, this.old.clone());
+		// 	this.anchors.set(event.pointerId, this.old.clone());
 		// 	return;
 		// }
 
-		this.anchors.set(pointer.id, pointer.initial.toCanvas(this.scene.parent.canvas));
+		this.anchors.set(event.pointerId, pointer.initial.toCanvas(this.scene.parent.canvas));
 	}
 }

@@ -27,4 +27,10 @@ export default class StaticInput extends EventRelay {
 	isDown(key) {
 		return this.downKeys.has(key);
 	}
+
+	dispose() {
+		this.downKeys.clear();
+		this.downKeys = null;
+		this.keymap = null;
+	}
 }

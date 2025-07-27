@@ -1,23 +1,20 @@
 export default class {
 	/** @private */
 	#events = new Map();
-	#single = new WeakSet();
+	#temp = new WeakSet();
 
 	/**
 	 * 
 	 * @private
-	 * @param {String} event 
+	 * @param {string} event 
 	 * @param  {...any} [args] 
 	 */
 	emit(event, ...args) {
-		const listeners = this.#events.get(event) || new Set();
-		if (typeof this['on' + event] == 'function') {
-			listeners.add(this['on' + event]);
-		}
-
+		const listeners = this.#events.get(event);
+		if (!listeners) return;
 		for (const listener of listeners) {
 			listener.apply(this, args);
-			if (this.#single.has(listener)) {
+			if (this.#temp.delete(listener)) {
 				listeners.delete(listener);
 			}
 		}
@@ -26,12 +23,12 @@ export default class {
 	/**
 	 * 
 	 * @private
-	 * @param {Array<String>} events 
+	 * @param {Array<string>} events 
 	 * @param {...any} [args] 
 	 */
 	emits(events, ...args) {
-		if (!(events instanceof Array)) {
-			throw new TypeError("Events must be of type: Array<String>");
+		if (typeof events[Symbol.iterator] != 'function') {
+			throw new TypeError("Events must be of type: Iterable<string>");
 		}
 
 		events.forEach(event => this.emit(event, ...args));
@@ -39,13 +36,13 @@ export default class {
 
 	/**
 	 * 
-	 * @param {String} event 
+	 * @param {string} event 
 	 * @param {Function} listener 
-	 * @returns {Number}
+	 * @returns {number}
 	 */
 	on(event, listener) {
 		if (typeof event != 'string') {
-			throw new TypeError("Event must be of type: String");
+			throw new TypeError("Event must be of type: string");
 		} else if (typeof listener != 'function') {
 			throw new TypeError("Listener must be of type: Function");
 		}
@@ -61,19 +58,19 @@ export default class {
 
 	/**
 	 * 
-	 * @param {String} event 
+	 * @param {string} event 
 	 * @param {Function} listener 
 	 * @returns {Function}
 	 */
 	once(event, listener) {
 		const size = this.on(...arguments);
-		this.#single.add(listener);
+		this.#temp.add(listener);
 		return size;
 	}
 
 	/**
 	 * 
-	 * @param {String} event 
+	 * @param {string} event 
 	 * @returns {Set}
 	 */
 	listeners(event) {
@@ -82,22 +79,51 @@ export default class {
 
 	/**
 	 * 
-	 * @param {String} event 
-	 * @returns {Number}
+	 * @param {string} event 
+	 * @returns {number}
 	 */
 	listenerCount(event) {
 		return this.listeners(event).size;
 	}
 
 	/**
+	 * Removes any or all listeners
+	 * @param {string?} [event] 
+	 * @param {Function?} [listener] 
+	 * @returns {boolean}
+	 */
+	off(event, listener = null) {
+		if (typeof event != 'string') {
+			if (this.#events.size < 1) return false;
+			this.#events.clear();
+			return true;
+		}
+
+		const listeners = this.#events.get(event);
+		if (!listeners || listeners.size < 1) return false;
+		if (typeof listener != 'function') {
+			for (const listener of listeners)
+				this.#temp.delete(listener);
+			listeners.clear();
+			this.#events.delete(event);
+			return true;
+		}
+
+		const removed = listeners.delete(listener);
+		removed && this.#temp.delete(listener);
+		if (listeners.size === 0) this.#events.delete(event);
+		return removed;
+	}
+
+	/**
 	 * 
-	 * @param {String} event 
+	 * @param {string} event 
 	 * @param {Function} listener 
-	 * @returns {Boolean}
+	 * @returns {boolean}
 	 */
 	removeListener(event, listener) {
 		if (typeof event != 'string') {
-			throw new TypeError("Event must be of type: String");
+			throw new TypeError("Event must be of type: string");
 		}
 
 		const listeners = this.#events.get(event);
@@ -110,14 +136,25 @@ export default class {
 
 	/**
 	 * 
-	 * @param {String} event 
-	 * @returns {Boolean}
+	 * @param {string} event 
+	 * @returns {boolean}
 	 */
 	removeAllListeners(event) {
 		if (typeof event != 'string') {
-			throw new TypeError("Event must be of type: String");
+			throw new TypeError("Event must be of type: string");
 		}
 
 		return this.#events.delete(event);
+	}
+
+	dispose() {
+		this.#events.clear();
+		this.#temp = new WeakSet();
+	}
+
+	destroy() {
+		this.dispose();
+		this.#events = null;
+		this.#temp = null;
 	}
 }

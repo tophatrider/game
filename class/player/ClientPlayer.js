@@ -1,14 +1,17 @@
+import DeviceOrientationHandler from "../core/input/DeviceOrientationHandler.js";
 import KeyboardHandler from "../core/input/KeyboardHandler.js";
 import BasePlayer from "./BasePlayer.js";
 
 export default class Player extends BasePlayer {
-	gamepad = new KeyboardHandler();
+	gamepad = new KeyboardHandler;
 	ghost = false;
+	virtualGamepad = new DeviceOrientationHandler;
 	constructor() {
 		super(...arguments);
 		this.gamepad.listen();
 		this.gamepad.on('down', this.updateRecords.bind(this));
 		this.gamepad.on('up', this.updateRecords.bind(this));
+		this.virtualGamepad.listen();
 	}
 
 	updateRecords(keys) {

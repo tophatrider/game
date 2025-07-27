@@ -64,7 +64,7 @@ export default class PointerHandler extends EventRelay {
 			this.old = this.position.toStatic();
 			this.isPrimary = event.button === 0;
 			if (!this.locked) {
-				this.rawPosition.set(new Vector(event.offsetX, event.offsetY, true));
+				this.rawPosition.set(event.offsetX, event.offsetY, true);
 				this.position.set(this.rawPosition.toCanvas(this.target));
 				this.target.setPointerCapture(event.pointerId);
 			}
@@ -88,9 +88,9 @@ export default class PointerHandler extends EventRelay {
 		pointer?._setPointerUp(event, this.target);
 		if (event.isPrimary) {
 			if (this.locked) {
-				this.rawPosition.add(new Vector(event.movementX, event.movementY, true));
+				this.rawPosition.add(event.movementX, event.movementY, true);
 			} else {
-				this.rawPosition.set(new Vector(event.offsetX, event.offsetY, true));
+				this.rawPosition.set(event.offsetX, event.offsetY, true);
 			}
 
 			this.stroke.set(this.position).sub(this.old);
@@ -108,7 +108,7 @@ export default class PointerHandler extends EventRelay {
 			this.down = false;
 			this.primary = null;
 			if (!this.locked) {
-				this.rawPosition.set(new Vector(event.offsetX, event.offsetY, true));
+				this.rawPosition.set(event.offsetX, event.offsetY, true);
 				this.position.set(this.rawPosition.toCanvas(this.target));
 				this.target.releasePointerCapture(event.pointerId);
 			}
@@ -125,6 +125,7 @@ export default class PointerHandler extends EventRelay {
 	setTarget(target) {
 		this.target !== null && this.dispose();
 		this.target = target;
+		// Listen when scene is done processing/intial render
 		this.listen();
 	}
 

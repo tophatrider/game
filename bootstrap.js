@@ -1,7 +1,8 @@
 import Game from "./class/Game.js";
 
 const canvas = document.querySelector('#view')
-	, game = new Game(canvas);
+	, game = new Game(canvas)
+	, overlayToggle = game.container.querySelector('.game-overlay > input');
 
 Object.defineProperty(window, 'game', { value: game });
 
@@ -88,3 +89,70 @@ async function uploadGhost(payload) {
 		alert("Something went wrong. Your ghost has not been saved. Keep this somewhere safe if you wish to keep your ghost!\n\n" + JSON.stringify(payload));
 	}
 }
+
+game.on('settingsChange', _handleSettingsChange);
+
+window.addEventListener('paste', function(event) {
+	const raw = event.clipboardData.getData('text');
+	if (!raw.match(/^(?:[-\d\sa-v]*#){2}[-\d\sa-w]*(?:#(?:BMX|MTB))?(?:#\d+)?$/i)) return;
+	if (raw.length > 5e4) {
+		event.preventDefault();
+		confirm("Would you like to load the track you pasted? (" + Math.floor(raw.length / 1e3) + "k)") && game.init({ code: raw, write: true });
+		if (overlayToggle.checked) {
+			overlayToggle.checked = false;
+			if (trackdialog.open) {
+				trackdialog.close();
+			}
+		}
+		return;
+	}
+
+	// event.preventDefault();
+	if (!trackdialog.open) {
+		if (!overlayToggle.checked) {
+			overlayToggle.checked = true;
+			game.scene.paused = true;
+		}
+
+		trackdialog.showModal();
+	}
+
+	// code.value = raw;
+});
+
+document.addEventListener('keyup', function(event) {
+	switch (event.key.toLowerCase()) {
+	case 'escape':
+		event.preventDefault();
+		overlayToggle.checked = !overlayToggle.checked;
+		game.scene.paused = overlayToggle.checked;
+	}
+});
+
+// document.addEventListener('pointerlockchange', function() {
+// 	if (this.pointerLockElement) return;
+// 	overlayToggle.checked = !overlayToggle.checked;
+// 	game.scene.paused = overlayToggle.checked;
+// });
+
+function _handleSettingsChange(settings) {
+	let element;
+	for (const setting in settings) {
+		const value = settings[setting];
+		switch (setting) {
+		case 'theme':
+			let stylesheet = document.querySelector('#game-theme'), href;
+			if (stylesheet && (href = stylesheet.href.replace(/[^/]*(\.css)$/, `${value}$1`)) && href !== stylesheet.href) {
+				stylesheet.setAttribute('href', href);
+			}
+
+			(element = document.getElementById(value)) && (element.checked = true);
+			break;
+		default:
+			if (typeof value != 'boolean') continue;
+			(element = document.getElementById(setting.replace(/([A-Z])/g, '-$1').toLowerCase())) && (element.checked = value);
+		}
+	}
+}
+
+_handleSettingsChange(game.settings);

@@ -6,19 +6,17 @@ export default class KeyboardHandler extends StaticInput {
 	}
 
 	_handleKeydown(event) {
-		event.preventDefault();
 		const key = this._maskKey(event.key);
 		if (key === null || this.downKeys.has(key)) return;
-
+		event.preventDefault();
 		this.downKeys.add(key);
 		this.emit('down', key);
 	}
 
 	_handleKeyup(event) {
-		event.preventDefault();
 		const key = this._maskKey(event.key);
 		if (key === null) return;
-
+		event.preventDefault();
 		this.downKeys.delete(key);
 		// Only dispatch if an entry was removed?
 		this.emit('up', key);
@@ -34,5 +32,6 @@ export default class KeyboardHandler extends StaticInput {
 
 	dispose() {
 		this.unlisten();
+		super.dispose();
 	}
 }

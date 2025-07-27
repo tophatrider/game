@@ -10,14 +10,13 @@ export default class extends Line {
 		}
 	}
 
-	stroke() {
+	stroke(event, pointer) {
 		if (!this.mouse.down) return;
 
-		this.anchor ??= this.mouse.old.clone();
-		if (this.anchor.distanceTo(this.mouse.position) >= this.length) {
-			this.scene.addLine(this.anchor, this.mouse.position, this.scenery);
-			this.mouse.old.set(this.mouse.position);
-			this.anchor = null;
+		const anchor = this.anchors.get(pointer.id);
+		if (anchor.distanceTo(this.mouse.position) >= this.length) {
+			this.scene.addLine(anchor, pointer.position, this.scenery);
+			this.anchors.set(pointer.id, pointer.position.toStatic());
 		}
 	}
 }
