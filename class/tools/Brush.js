@@ -14,7 +14,7 @@ export default class extends Line {
 		if (!this.mouse.down) return;
 
 		const anchor = this.anchors.get(pointer.id);
-		if (anchor.distanceTo(this.mouse.position) >= this.length) {
+		if (anchor.distanceTo(pointer.position) >= this.length) {
 			this.scene.addLine(anchor, pointer.position, this.scenery);
 			this.anchors.set(pointer.id, pointer.position.toStatic());
 		}

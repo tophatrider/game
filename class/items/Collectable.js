@@ -12,7 +12,7 @@ export default class extends Item {
 
 	draw(ctx, position = this.position.toPixel()) {
 		ctx.beginPath();
-		ctx.arc(position.x, position.y, 7 * this.scene.zoom, 0, 2 * Math.PI);
+		ctx.arc(position.x, position.y, 7 * this.scene.camera.zoom, 0, 2 * Math.PI);
 		ctx.save();
 		ctx.fillStyle = this.used ? this.constructor.color.replaceAll('0', 'a') : this.constructor.color;
 		ctx.fill();

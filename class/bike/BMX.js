@@ -1,5 +1,5 @@
 import Bike from "./Bike.js";
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
 
 export default class BMX extends Bike {
 	constructor() {
@@ -77,8 +77,8 @@ export default class BMX extends Bike {
 	draw(ctx) {
 		ctx.save();
 		this.player.ghost && (ctx.globalAlpha /= 2,
-		this.player.scene.cameraFocus && this.player.scene.cameraFocus !== this.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.hitbox.pos.distanceTo(this.player.scene.cameraFocus.pos) / (this.hitbox.size / 2) ** 2))));
-		ctx.lineWidth = 3.5 * this.player.scene.zoom;
+		this.player.scene.camera.controller.focalPoint && this.player.scene.camera.controller.focalPoint !== this.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.hitbox.pos.distanceTo(this.player.scene.camera.controller.target) / (this.hitbox.size / 2) ** 2))));
+		ctx.lineWidth = 3.5 * this.player.scene.camera.zoom;
 		this.rearWheel.draw(ctx);
 		this.frontWheel.draw(ctx);
 
@@ -91,7 +91,7 @@ export default class BMX extends Bike {
 		let c = rearWheel.sum(l.scale(0.84)).sum(i.scale(0.37));
 		let w = rearWheel.sum(l.scale(0.4)).sum(i.scale(0.05));
 
-		ctx.lineWidth = this.player.scene.zoom * 3;
+		ctx.lineWidth = this.player.scene.camera.zoom * 3;
 		ctx.beginPath()
 		ctx.moveTo(rearWheel.x, rearWheel.y)
 		ctx.lineTo(a.x, a.y)
@@ -100,7 +100,7 @@ export default class BMX extends Bike {
 		ctx.lineTo(w.x, w.y)
 		ctx.lineTo(rearWheel.x, rearWheel.y);
 
-		c = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(this.player.scene.zoom * 6);
+		c = new Vector(Math.cos(this.pedalSpeed), Math.sin(this.pedalSpeed)).scale(this.player.scene.camera.zoom * 6);
 		let foot = w.sum(c);
 		let shadowFoot = w.diff(c);
 
@@ -145,10 +145,13 @@ export default class BMX extends Bike {
 				ctx.lineTo(...Object.values(h.sum(l.scale(0.02)).sum(i.scale(0.2)))),
 				ctx.lineTo(...Object.values(a.sum(l.scale(0.05)).sum(i.scale(1.11)))),
 				ctx.lineTo(h.x, h.y);
+				const fillStyle = ctx.fillStyle;
+				ctx.fillStyle = this.player.scene.game.colorScheme.palette.track;
 				ctx.fill();
+				ctx.fillStyle = fillStyle;
 			}
 
-			ctx.lineWidth = this.player.scene.zoom * 2;
+			ctx.lineWidth = this.player.scene.camera.zoom * 2;
 			ctx.stroke();
 		}
 

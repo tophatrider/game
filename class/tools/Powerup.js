@@ -21,15 +21,15 @@ const P = {
 
 export default class extends Tool {
 	addPowerup(powerup) {
-		let x = Math.floor(powerup.position.x / this.scene.grid.scale);
-		let y = Math.floor(powerup.position.y / this.scene.grid.scale);
-		this.scene.grid.sector(x, y, true).powerups.push(powerup);
+		let x = Math.floor(powerup.position.x / this.scene.sectors.scale);
+		let y = Math.floor(powerup.position.y / this.scene.sectors.scale);
+		this.scene.sectors.sector(x, y, true).powerups.push(powerup);
 		if (/^(checkpoint|goal|teleporter)$/i.test(this.parent.selected)) {
 			this.scene.collectables.push(powerup);
 			if (powerup instanceof Teleporter) {
-				x = Math.floor(powerup.alt.x / this.scene.grid.scale);
-				y = Math.floor(powerup.alt.y / this.scene.grid.scale);
-				this.scene.grid.sector(x, y, true).powerups.push(powerup);
+				x = Math.floor(powerup.alt.x / this.scene.sectors.scale);
+				y = Math.floor(powerup.alt.y / this.scene.sectors.scale);
+				this.scene.sectors.sector(x, y, true).powerups.push(powerup);
 			}
 		}
 	}

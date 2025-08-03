@@ -1,4 +1,4 @@
-import Vector from "../math/Vector.js";
+import Vector from "../geometry/Vector.js";
 import Mass from "./Mass.js";
 
 export default class Shard extends Mass {
@@ -17,10 +17,10 @@ export default class Shard extends Mass {
 	draw(ctx) {
 		ctx.beginPath();
 		const pos = this.pos.toPixel();
-		let b = this.shape[0] * this.size * this.parent.player.scene.zoom;
+		let b = this.shape[0] * this.size * this.parent.player.scene.camera.zoom;
 		ctx.moveTo(pos.x + b * Math.cos(this.rotation), pos.y + b * Math.sin(this.rotation));
 		for (let e = 2; e < 8; e++) {
-			b = this.shape[e - 1] * this.size * this.parent.player.scene.zoom / 2,
+			b = this.shape[e - 1] * this.size * this.parent.player.scene.camera.zoom / 2,
 			ctx.lineTo(pos.x + b * Math.cos(this.rotation + 6.283 * e / 8), pos.y + b * Math.sin(this.rotation + 6.283 * e / 8));
 		}
 

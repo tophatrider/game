@@ -7,35 +7,24 @@
 
 html {
 	background-color: var(--background-color);
-	color: var(--text-color);
 	font-family: Arial, Helvetica, sans-serif;
 }
 
+html, body {
+	height: 100%;
+	touch-action: none;
+}
+
 body {
+	color: var(--text-color);
 	margin: 0;
 	pointer-events: none;
-	touch-action: none;
-}
-
-canvas#view {
-	background-color: var(--background-color);
-	height: 100vh;
-	min-height: 240px;
-	pointer-events: stroke;
-	touch-action: none;
-	width: 100vw;
-}
-
-:fullscreen canvas#view {
-	height: 100% !important;
-	max-height: none;
-	max-width: none;
-	width: 100% !important;
 }
 
 @media (orientation: landscape) { /* show mobile controls?*/ }
 
-div#game-container {
+#game-container {
+	height: 100%;
 	position: relative;
 	margin: auto;
 	max-height: 100vh;
@@ -43,12 +32,33 @@ div#game-container {
 	overflow: hidden;
 }
 
-div#game-container .ripple {
+:fullscreen #game-container {
+	background-color: var(--background-color);
+	height: 100% !important;
+	max-height: none;
+	max-width: none;
+	width: 100% !important;
+}
+
+#game-container.vignette::after {
+	background: radial-gradient(circle, transparent 33%, hsl(0 0% 0% / 33%) 100%);
+	content: "";
+	inset: 0;
+	opacity: 0;
+	pointer-events: none;
+	position: absolute;
+	transition: opacity 250ms ease;
+	will-change: opacity;
+}
+
+:has(.playpause > :not(:checked)) #game-container.vignette::after { opacity: 1 }
+
+#game-container .ripple {
 	overflow: hidden;
 	position: relative;
 }
 
-div#game-container .ripple::before {
+#game-container .ripple::before {
 	aspect-ratio: 1;
 	background-color: hsl(0, 0%, 50%);
 	border-radius: 50%;
@@ -59,15 +69,16 @@ div#game-container .ripple::before {
 	position: absolute;
 	scale: 2;
 	transition: opacity 1s, scale 800ms ease-out;
+	will-change: opacity, scale;
 }
 
-div#game-container .ripple:active::before {
+#game-container .ripple:active::before {
 	opacity: 0.5;
 	scale: 0;
-	transition: 0s;
+	transition: none;
 }
 
-div#game-container .replay-progress {
+#game-container .replay-progress {
 	border: none;
 	bottom: 0;
 	height: 4px;
@@ -76,10 +87,11 @@ div#game-container .replay-progress {
 	right: 0;
 	transition: height 100ms ease 0s;
 	width: auto;
+	will-change: height;
 }
 
 @media (hover:hover) {
-	div#game-container .replay-progress:hover {
+	#game-container .replay-progress:hover {
 		cursor: pointer;
 		filter: brightness(1.25);
 		height: 6px;
@@ -87,32 +99,29 @@ div#game-container .replay-progress {
 }
 
 @media (hover:none) {
-	div#game-container .replay-progress:active {
+	#game-container .replay-progress:active {
 		cursor: pointer;
 		filter: brightness(1.25);
 		height: 6px;
 	}
 }
 
-div#game-container .replay-progress::-webkit-progress-value { background: var(--border-color) }
-div#game-container .replay-progress::-webkit-progress-bar { background: var(--background-color) }
+#game-container .replay-progress::-webkit-progress-value { background: var(--border-color) }
+#game-container .replay-progress::-webkit-progress-bar { background: var(--background-color) }
 
-.bhr-dialog {
-	backdrop-filter: blur(1rem) brightness(0.75);
-	background-color: transparent;
-	border: none;
-	border-radius: 0.5rem;
-	box-shadow: hsl(0deg 0% 0% / 50%) 0px 0px 4px;
+dialog {
+	backdrop-filter: contrast(calc(.9 + .05 * var(--brightness-multiplier))) blur(1rem);
+	background-color: hsl(0 0 50% / 8%);
+	border: 1px solid hsl(0 0 50% / 10%);
+	border-radius: 1.5rem;
+	box-shadow: 0 0 6px hsl(0 0 50% / 25%);
+	padding: clamp(1rem, 4.5vmax, 3rem) clamp(1rem, 6vmax, 4rem);
 }
 
-.input-container {
-	position: relative;
-}
+dialog>:is(h1, h2, h3, h4):first-child { margin-block-start: 0 }
 
-.input-container:has(> :placeholder-shown)> :last-child {
-	visibility: hidden;
-}
-
+.input-container { position: relative }
+.input-container:has(> :placeholder-shown)> :last-child { visibility: hidden }
 .input-container > .char-counter {
 	-webkit-user-select: none;
 	bottom: 0;
@@ -126,14 +135,12 @@ div#game-container .replay-progress::-webkit-progress-bar { background: var(--ba
 	user-select: none;
 }
 
-.input-container > .char-counter::after {
-	content: "k";
-}
+.input-container > .char-counter::after { content: "k" }
 
 .toast-container {
 	border-radius: 4px;
 	bottom: 0;
-	color: var(--text-color);
+	color: currentColor;
 	display: grid;
 	gap: .25rem;
 	margin: .75vmin;
@@ -150,14 +157,16 @@ div#game-container .replay-progress::-webkit-progress-bar { background: var(--ba
 	background-color: hsl(0deg 0% 50% / calc(40% - 20% * var(--brightness-multiplier)));
 	border-radius: 4px;
 	box-sizing: border-box;
-	color: var(--text-color);
+	color: currentColor;
 	font-size: smaller;
 	padding: .75rem;
 	pointer-events: all;
 	width: 100%;
 }
 
-.game-overlay {
+.overlay {
+	-webkit-drag-select: none;
+	-webkit-tap-highlight-color: transparent;
 	align-items: center;
 	backdrop-filter: blur(.75rem) brightness(calc(.75 - .1 * var(--brightness-multiplier)));
 	display: flex;
@@ -166,39 +175,55 @@ div#game-container .replay-progress::-webkit-progress-bar { background: var(--ba
 	padding: 1rem;
 	pointer-events: all;
 	position: absolute;
-	visibility: hidden;
+	touch-action: none;
+	user-select: none;
 }
 
-.game-overlay nav {
+#game-container>.overlay {
+	-webkit-drag-select: none;
+	-webkit-tap-highlight-color: transparent;
+	align-items: center;
+	backdrop-filter: blur(.75rem) brightness(calc(.75 - .1 * var(--brightness-multiplier)));
+	display: flex;
+	flex-direction: column;
+	inset: 0;
+	padding: 1rem;
+	pointer-events: all;
+	position: absolute;
+	touch-action: none;
+	user-select: none;
+}
+
+#game-container>.overlay nav {
 	display: grid;
-	font-family: fantasy;
-	font-size: clamp(8px, 2cqw, 1rem);
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+	font-size: clamp(9px, 2cqw, 1rem);
+	font-weight: bolder;
 	grid-gap: .25rem;
-	grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(6em, 1fr));
 	justify-content: center;
 	margin-left: auto;
 	margin-right: auto;
-	max-width: 50%;
+	max-width: calc(100vw - 16px);
+	min-width: 50%;
 	width: 100vmin;
 }
 
-.game-overlay nav>label {
-	-webkit-user-select: none;
+#game-container>.overlay nav>label {
 	/* background-color: hsl(0deg 0% 50% / 8%); */
 	/* border: none; */
 	/* border: 1px solid hsl(0deg 0% 50% / 8%); */
-	border: 1px solid hsl(0deg 0% 50% / calc(50% - 40% * var(--brightness-multiplier)));
+	border: 1px solid hsl(0deg 0% calc(40% - 15% * var(--brightness-multiplier)) / 40%);
 	border-radius: .25rem;
 	box-sizing: border-box;
 	opacity: .8;
 	padding: .25rem .5rem;
 	text-align: center;
 	transition: background-color 80ms;
-	user-select: none;
 }
 
 @media (hover:hover) {
-	.game-overlay nav>label:hover {
+	#game-container>.overlay nav>label:hover {
 		/* background-color: hsl(0deg 0% 50% / 20%); */
 		background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
 		/* cursor: pointer; */
@@ -206,60 +231,60 @@ div#game-container .replay-progress::-webkit-progress-bar { background: var(--ba
 }
 
 @media (hover:none) {
-	.game-overlay nav>label:active { background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier))) }
+	#game-container>.overlay nav>label:active { background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier))) }
 }
 
-.game-overlay:has(input[type="radio"]#track:checked) nav>label[for="track"],
-.game-overlay:has(input[type="radio"]#ghost:checked) nav>label[for="ghost"],
-.game-overlay:has(input[type="radio"]#recorder-toggle:checked) nav>label[for="recorder-toggle"],
-.game-overlay:has(input[type="radio"]#settings:checked) nav>label[for="settings"] {
+#game-container>.overlay:has(input[type="radio"]#editor:checked) nav>label[for="editor"],
+#game-container>.overlay:has(input[type="radio"]#replay:checked) nav>label[for="replay"],
+#game-container>.overlay:has(input[type="radio"]#controls:checked) nav>label[for="controls"],
+#game-container>.overlay:has(input[type="radio"]#recorder-toggle:checked) nav>label[for="recorder-toggle"],
+#game-container>.overlay:has(input[type="radio"]#settings:checked) nav>label[for="settings"] {
 	/* background-color: hsl(0deg 0% 40% / 40%); */
 	background-color: hsl(0deg 0% calc(30% - 15% * var(--brightness-multiplier)) / 50%);
 	opacity: 1;
 }
 
-.game-overlay>section {
+#game-container>.overlay>section {
 	align-items: center;
-	display: none;
+	display: flex;
 	flex-direction: column;
 	gap: .125rem;
 	overflow: auto;
-	padding: 1rem;
+	padding: .25rem;
 	/* margin: auto; */
-	margin: 1rem;
+	margin: .75rem;
 	margin-bottom: auto;
 	max-width: 80%;
 	min-height: 50%;
+	min-width: 200px;
 }
 
-.game-overlay section[title]::before {
+#game-container>.overlay .auto-grid {
+	display: grid;
+	grid-gap: max(2px, .125rem);
+	grid-template-columns: repeat(auto-fit, minmax(max(85px, 25vmin), 1fr));
+}
+
+#game-container>.overlay section[title]::before {
 	content: attr(title);
 	display: block;
 	font-weight: bold;
 	margin-bottom: .5rem;
 }
 
-.game-overlay input:is([type="number"],[type="text"]) {
+#game-container>.overlay input:is([type="number"],[type="text"]) {
 	backdrop-filter: brightness(0.5);
 	background-color: transparent;
 	border: none;
 	border-radius: .25rem;
-	color: var(--text-color);
+	color: currentColor;
 	outline: none;
 	padding: .25rem .5rem;
 }
 
-/* section:has(> input:is([type="checkbox"], [type="radio"]):not(:checked)) {
-    display: none !important;
-} */
+:is(section, #game-container>.overlay):has(> input[hidden]:is([type="checkbox"], [type="radio"]):not(:checked)) { display: none !important }
 
-:has(> :checked) {
-	display: flex !important;
-	/* revert-layer !important */
-	visibility: visible !important;
-}
-
-.game-overlay label:has(> input) {
+#game-container>.overlay label:has(> input) {
 	-webkit-user-select: none;
 	align-items: center;
 	border-radius: .25rem;
@@ -272,46 +297,57 @@ div#game-container .replay-progress::-webkit-progress-bar { background: var(--ba
 	width: -webkit-fill-available;
 }
 
-.game-overlay label > input:nth-child(1) {
-	margin-left: 1rem;
-}
+#game-container>.overlay label > input:nth-child(1) { margin-left: 1rem }
 
-.game-overlay button,
+#game-container>.overlay button,
 .toast button {
 	-webkit-user-select: none;
 	border: none;
 	border-radius: 4px;
-	color: var(--text-color);
-	transition: all 40ms;
+	color: currentColor;
+	transition: background-color 80ms;
 	user-select: none;
+	will-change: background-color;
 }
 
-.game-overlay button,
-.game-overlay label:has(> input) {
+#game-container>.overlay button,
+#game-container>.overlay label:has(> input) {
 	/* background-color: hsl(0deg 0% 40% / 60%); */
-	background-color: hsl(0deg 0% calc(40% - 20% * var(--brightness-multiplier)) / 50%);
+	background-color: hsl(0deg 0% calc(40% - 25% * var(--brightness-multiplier)) / 40%);
+	border: 1px solid hsl(0 0% 50% / calc(15% - 7.5% * var(--brightness-multiplier)));
 	padding: 0.5rem 1rem;
+	text-align: left;
+	width: 100%;
 }
 
 .toast button {
 	background-color: transparent;
 	padding: 0.25rem .5rem;
+	transition: backdrop-filter 40ms;
+	will-change: backdrop-filter;
 }
 
 @media (hover:hover) {
-	.game-overlay button:hover { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+	/* #game-container>.overlay button:hover { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) } */
+	#game-container>.overlay label:has(> input):hover,
+	#game-container>.overlay button:hover { background-color: hsl(0deg 0% calc(40% - 20% * var(--brightness-multiplier)) / 65%) }
 	.toast button:hover { backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+
+	#game-container>.overlay label:has(> input):hover:active,
+	#game-container>.overlay button:hover:active { background-color: hsl(0deg 0% calc(40% - 15% * var(--brightness-multiplier)) / 75%) }
 }
 
 @media (hover:none) {
-	.game-overlay button:active { filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
+	#game-container>.overlay label:has(> input):active,
+	#game-container>.overlay button:active { background-color: hsl(0deg 0% calc(40% - 20% * var(--brightness-multiplier)) / 65%) }
 	.toast button:active { backdrop-filter: brightness(calc(1 + .2 * var(--brightness-multiplier))) }
 }
 
-.disabled,
-:disabled,
+:disabled, .disabled,
 :placeholder-shown + * > .hidden-placeholder,
-.input-container:has(> :placeholder-shown) + * > .hidden-placeholder {
+.input-container:has(> :placeholder-shown) + * > .hidden-placeholder,
+#game-container>.overlay label[dependant="next-element"]:has(> input:not(:checked)) + *,
+#game-container>.overlay label:has(> input:not(:checked)) + [dependency="previous-element"] {
 	opacity: 0.5;
 	pointer-events: none;
 }
@@ -319,19 +355,26 @@ div#game-container .replay-progress::-webkit-progress-bar { background: var(--ba
 .timebar:not(:hover)::-webkit-slider-thumb { visibility: hidden }
 
 textarea {
-	/* background-color: hsl(0deg 0% 50% / 20%); */
-	background-color: hsl(0deg 0% 50% / calc(50% - 30% * var(--brightness-multiplier)));
-	border: none;
+	background-color: hsl(0deg 0% calc(50% - 30% * var(--brightness-multiplier)) / 75%);
+	border: 1px solid hsl(0 0 50% / 8%);
 	border-radius: 5px;
-	color: var(--text-color);
+	color: currentColor;
 	max-width: -webkit-fill-available;
-	outline: none;
-	padding: 5px;
+	outline: 1px solid transparent;
+	padding: .75em;
 	resize: none;
+	transition: background-color 80ms, outline 60ms;
 }
 
-.game-overlay>section:has(> #settings)>section {
+textarea:focus {
+	background-color: hsl(0deg 0% calc(50% - 35% * var(--brightness-multiplier)) / 75%);
+	outline: 2px solid hsl(0 0 50% / 20%);
+}
+
+#game-container>.overlay>section:has(> #settings)>section {
 	display: grid;
 	grid-gap: 0.125rem;
 	width: -webkit-fill-available;
 }
+
+.danger { background-color: hsl(0deg 45% 35% / calc(50% + 10% * var(--brightness-multiplier))) !important }

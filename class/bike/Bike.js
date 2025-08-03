@@ -1,4 +1,4 @@
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
 import Mass from "../core/entities/Mass.js";
 import Wheel from "./part/Wheel.js";
 import Spring from "../core/physics/Spring.js";

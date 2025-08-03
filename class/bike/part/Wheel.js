@@ -7,7 +7,7 @@ export default class extends Mass {
 	draw(ctx) {
 		const pos = this.pos.toPixel();
 		ctx.beginPath();
-		ctx.arc(pos.x, pos.y, this.size * this.parent.player.scene.zoom - ctx.lineWidth / 2, 0, 2 * Math.PI);
+		ctx.arc(pos.x, pos.y, this.size * this.parent.player.scene.camera.zoom - ctx.lineWidth / 2, 0, 2 * Math.PI);
 		ctx.stroke();
 	}
 

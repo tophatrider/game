@@ -5,8 +5,9 @@ import Vector from "../core/physics/Vector.js";
 export default class extends Tool {
 	selected = [];
 	press() {
-		const vector = new Vector(this.points[0], this.points[1]).toCanvas(this.scene.parent.canvas);
-		this.scene.grid.sector(Math.floor(vector.x / this.scene.grid.scale), Math.floor(vector.y / this.scene.grid.scale)).fill(vector);
+		const vector = new Vector(this.points[0], this.points[1]).toCanvas(this.scene.game.canvas);
+		this.scene.sectors.sector(Math.floor(vector.x / this.scene.sectors.scale), Math.floor(vector.y / this.scene.sectors.scale))
+			.fill(vector);
 	}
 
 	draw(ctx) {

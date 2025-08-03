@@ -2,10 +2,14 @@ import EventEmitter from "./EventEmitter.js";
 
 export default class EventRelay extends EventEmitter {
 	#handlers = [];
+	#listening = false;
 	listen(...args) {
 		if (args.length > 0 && args[0] !== true) {
+			const [, event, listener] = args
+				, existingListener = this.#handlers.find(([, e, l]) => e === event && l === listener);
+			if (existingListener) return;
 			this.#handlers.push([...args]);
-			return;
+			if (!this.#listening) return;
 		}
 
 		for (const [target, ...args] of this.#handlers)
@@ -17,7 +21,7 @@ export default class EventRelay extends EventEmitter {
 		if (typeof event == 'string') {
 			for (const entry of this.#handlers.filter(([, e]) => e === event)) {
 				const [target, event, listener] = entry;
-				target.removeEventListener(event, listener);
+				this.#listening && target.removeEventListener(event, listener);
 				this.#handlers.splice(this.#handlers.indexOf(entry), 1);
 			}
 			return;
@@ -31,5 +35,10 @@ export default class EventRelay extends EventEmitter {
 	dispose() {
 		this.unlisten();
 		super.dispose();
+	}
+
+	destroy() {
+		this.unlisten();
+		super.destroy();
 	}
 }

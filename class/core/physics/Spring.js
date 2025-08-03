@@ -1,4 +1,4 @@
-import Vector from "../math/Vector.js";
+import Vector from "../geometry/Vector.js";
 
 export default class Spring {
 	dampConstant = .5;

@@ -1,7 +1,7 @@
 import EventRelay from "../EventRelay.js";
-import StaticVector from "../math/StaticVector.js";
+import StaticVector from "../geometry/StaticVector.js";
 // import SmartVector from "../math/SmartVector.js";
-import Vector from "../math/Vector.js";
+import Vector from "../geometry/Vector.js";
 import Pointer from "./Pointer.js";
 
 export default class PointerHandler extends EventRelay {
@@ -139,6 +139,11 @@ export default class PointerHandler extends EventRelay {
 		super.listen(target, 'pointermove', this._handlePointerMove.bind(this), { passive: true });
 		super.listen(target, 'pointerup', this._handlePointerUp.bind(this), { passive: true });
 		super.listen(target, 'wheel', this._handleScroll.bind(this));
+		if (isSafari()) {
+			super.listen(window, 'gesturestart', e => e.preventDefault());
+			super.listen(window, 'gesturechange', e => e.preventDefault());
+			super.listen(window, 'gestureend', e => e.preventDefault());
+		}
 		super.listen();
 		console.debug('[PointerHandler] Listeners bound');
 	}
@@ -156,11 +161,18 @@ export default class PointerHandler extends EventRelay {
 	}
 
 	dispose() {
-		this.unlisten();
+		super.dispose();
 		this.target = null;
 	}
 
 	static get isTouchScreen() {
 		return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
 	}
+}
+
+function isSafari() {
+	const ua = navigator.userAgent;
+	const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+	const isAppleDevice = /Macintosh|iPhone|iPad|iPod/.test(ua);
+	return isSafari && isAppleDevice;
 }

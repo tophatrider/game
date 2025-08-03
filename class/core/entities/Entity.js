@@ -1,4 +1,4 @@
-import Vector from "../math/Vector.js";
+import Vector from "../geometry/Vector.js";
 import Body from "../physics/Body.js";
 
 export default class {

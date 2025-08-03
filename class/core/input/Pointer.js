@@ -1,5 +1,5 @@
-import StaticVector from "../math/StaticVector.js";
-import Vector from "../math/Vector.js";
+import StaticVector from "../geometry/StaticVector.js";
+import Vector from "../geometry/Vector.js";
 
 export default class Pointer {
 	down = false;

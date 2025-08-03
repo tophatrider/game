@@ -61,7 +61,7 @@ export default class BaseVector {
 	}
 
 	toCanvas(canvas) {
-		return this.constructor.from(Math.round((this.x - canvas.width / 2) / window.game.scene.zoom + window.game.scene.camera.x), Math.round((this.y - canvas.height / 2) / window.game.scene.zoom + window.game.scene.camera.y));
+		return this.constructor.from(Math.round((this.x - canvas.width / 2) / game.scene.camera.zoom + game.scene.camera.x), Math.round((this.y - canvas.height / 2) / game.scene.camera.zoom + game.scene.camera.y));
 	}
 
 	toJSON() {
@@ -69,7 +69,7 @@ export default class BaseVector {
 	}
 
 	toPixel(game = window.game) {
-		return this.constructor.from((this.x - game.scene.camera.x) * game.scene.zoom + game.canvas.width / 2, (this.y - game.scene.camera.y) * game.scene.zoom + game.canvas.height / 2);
+		return this.constructor.from((this.x - game.scene.camera.x) * game.scene.camera.zoom + game.canvas.width / 2, (this.y - game.scene.camera.y) * game.scene.camera.zoom + game.canvas.height / 2);
 	}
 
 	toString() {

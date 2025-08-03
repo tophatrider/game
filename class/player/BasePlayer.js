@@ -1,6 +1,6 @@
 import { GRAVITY } from "../core/constants.js";
 import SnapshotHandler from "../core/history/SnapshotManager.js";
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
 import MTB from "../bike/MTB.js";
 import BMX from "../bike/BMX.js";
 import Ragdoll from "../bike/part/Ragdoll.js";
@@ -66,7 +66,7 @@ export default class BasePlayer {
 
 	setVehicle(vehicle) {
 		this.scene.reset(vehicle || (this.vehicle.name != 'BMX' ? 'BMX' : 'MTB'));
-		this.scene.cameraFocus = this.vehicle.hitbox;
+		this.scene.camera.controller.setFocalPoint(this.vehicle.hitbox);
 	}
 
 	draw(ctx) {
@@ -178,7 +178,7 @@ export default class BasePlayer {
 		this.explosion = null;
 		this.gravity = Vector.from(GRAVITY);
 		this.hat = null;
-		this.itemsCollected = new Set();
+		this.itemsCollected.clear();
 		this.pendingConsumables = 0;
 		this.slow = false;
 		this.snapshots.reset();

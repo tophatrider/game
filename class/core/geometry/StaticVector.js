@@ -4,7 +4,6 @@ export default class StaticVector extends BaseVector {
 	constructor() {
 		super(...arguments);
 		Object.freeze(this);
-		Reflect.preventExtensions(this);
 	}
 
 	add(v) {

@@ -7,7 +7,7 @@ export default class {
 	}
 
 	get mouse() {
-		return this.scene.parent.mouse;
+		return this.scene.game.mouse;
 	}
 
 	clip() {}

@@ -1,10 +1,10 @@
-import Vector from "../../core/math/Vector.js";
+import Vector from "../../core/geometry/Vector.js";
 
 export default class {
 	constructor(t, e, i, s, n) {
+		Object.defineProperty(this, 'scene', { value: n, writable: true });
 		this.a = t instanceof Vector ? t : new Vector(t, e);
 		this.b = e instanceof Vector ? e : new Vector(i, s);
-		this.scene = n;
 	}
 
 	get vector() {
@@ -15,10 +15,10 @@ export default class {
 		return this.vector.length;
 	}
 
-	draw(ctx, e, i) {
+	draw(ctx) {
 		ctx.beginPath();
-		ctx.moveTo((this.a.x - e) * this.scene.zoom, (this.a.y - i) * this.scene.zoom);
-		ctx.lineTo((this.b.x - e) * this.scene.zoom, (this.b.y - i) * this.scene.zoom);
+		ctx.moveTo(this.a.x, this.a.y);
+		ctx.lineTo(this.b.x, this.b.y);
 		ctx.stroke();
 	}
 
@@ -56,5 +56,13 @@ export default class {
 
 	toString() {
 		return this.a.toString() + ' ' + this.b.toString();
+	}
+
+	toJSON() {
+		return {
+			p1: this.a.toJSON(),
+			p2: this.b.toJSON(),
+			type: this.type
+		}
 	}
 }

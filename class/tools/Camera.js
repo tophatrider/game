@@ -1,8 +1,25 @@
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
+import CSSCursor from "../core/ui/CSSCursor.js";
 import Tool from "./Tool.js";
 
 export default class extends Tool {
-	static cursor = 'move';
+	// static cursor = 'move';
+	static cursor = new CSSCursor([
+		['circle', {
+			cx: 8,
+			cy: 8,
+			r: 5.5,
+			fill: 'none'
+		}],
+		['path', {
+			d: 'M6.5 2.5 8 1l1.5 1.5m-3 11L8 15l1.5-1.5m-7-7L1 8l1.5 1.5m11-3L15 8l-1.5 1.5',
+			strokeLineCap: 'round',
+			strokeLineJoin: 'round'
+		}]
+	], {
+		size: 16,
+		strokeWidth: 2
+	});
 
 	#pinch = {
 		active: false,
@@ -35,7 +52,7 @@ export default class extends Tool {
 	}
 
 	scroll(event) {
-		this.scene['zoom' + (event.wheelDelta > 0 ? 'In' : 'Out')]();
+		this.scene.camera.zoom += event.wheelDelta > 0 ? .2 : -.2;
 	}
 
 	stroke(event) {
@@ -65,13 +82,14 @@ export default class extends Tool {
 			}
 		}
 
-		const offset = new Vector(event.movementX * window.devicePixelRatio / this.scene.zoom, event.movementY * window.devicePixelRatio / this.scene.zoom);
+		const offset = new Vector(event.movementX, event.movementY).scale(window.devicePixelRatio ?? 1).downScale(this.scene.camera.zoom);
 		if (this.scene.transformMode) {
 			this.trackOffset.add(offset);
 		}
 
-		this.mouse.down && (this.scene.camera.sub(offset),
-		this.mouse.position.sub(offset));
+		if (!this.mouse.down) return;
+		this.scene.camera.move(-offset.x, -offset.y);
+		this.mouse.position.sub(offset);
 	}
 
 	clip() {

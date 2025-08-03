@@ -1,4 +1,4 @@
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
 import Collectable from "./Collectable.js";
 
 export default class Teleporter extends Collectable {

@@ -23,9 +23,9 @@ export default class Explosion extends Effect {
 			// this.size -= this.sizeDiminution;
 			ctx.beginPath();
 			const pos = this.pos.toPixel();
-			ctx.moveTo(pos.x + this.size / 2 * Math.cos(Math.random() * 2 * Math.PI) * this.player.scene.zoom, pos.y + this.size / 2 * Math.sin(Math.random() * 2 * Math.PI) * this.player.scene.zoom);
+			ctx.moveTo(pos.x + this.size / 2 * Math.cos(Math.random() * 2 * Math.PI) * this.player.scene.camera.zoom, pos.y + this.size / 2 * Math.sin(Math.random() * 2 * Math.PI) * this.player.scene.camera.zoom);
 			for (let a = 1; a < 16; a++) {
-				let d = (this.size + 30 * Math.random()) / 2 * this.player.scene.zoom;
+				let d = (this.size + 30 * Math.random()) / 2 * this.player.scene.camera.zoom;
 				ctx.lineTo(pos.x + d * Math.cos(Math.random() * 2 * Math.PI + 2 * Math.PI * a / 16), pos.y + d * Math.sin(Math.random() * 2 * Math.PI + 2 * Math.PI * a / 16));
 			}
 

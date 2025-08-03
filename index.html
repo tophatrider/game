@@ -2,151 +2,315 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 	<title>Top Hat Rider - Calculamatrise</title>
 	<link rel="stylesheet" href="assets/styles/default.css">
 	<link rel="stylesheet" href="assets/styles/dark.css" id="game-theme">
-	<script type="module" src="assets/scripts/GameInterfaceManager.js"></script>
+	<link rel="stylesheet" href="assets/styles/gui.css">
+	<script src="assets/scripts/elements/GameInstance.js"></script>
+	<script src="assets/scripts/elements/SmartLabel.js"></script>
 </head>
 <body>
-	<div id="game-container">
-		<canvas id="view"></canvas>
-		<div class="game-overlay" style="display: none;">
+	<bhr-instance class="vignette" id="game-container" track-src="demo/track.txt" write>
+		<canvas id="main" part="main"></canvas>
+		<div class="gui">
+			<div class="toolbar scale">
+				<!-- <section class="bottom island right">
+					<button class="toolbar-item fullscreen" title="Fullscreen - F" onclick="document.fullscreenElement ? document.exitFullscreen() : game.container.requestFullscreen()"></button>
+				</section> -->
+				<section class="bottom center island">
+					<button class="toolbar-item rewind" title="Cancel Checkpoint - Backspace" onclick="game.scene.removeCheckpoint()"></button>
+					<button class="toolbar-item backtrack" title="Checkpoint - Enter" onclick="game.scene.returnToCheckpoint()"></button>
+					<label class="toolbar-item playpause" tooltip="Pause/Play" kbd="Space"><input type="checkbox" checked hidden onchange="game.scene.paused=!this.checked"></label><!-- ▶ -->
+					<button class="toolbar-item backtrack" title="Checkpoint - Shift + Enter" style="rotate: 180deg;" onclick="game.scene.returnToCheckpoint()"></button>
+					<button class="toolbar-item rewind" title="Cancel Checkpoint - Shift + Backspace" style="rotate: 180deg;" onclick="game.scene.restoreCheckpoint()"></button>
+				</section>
+				<section class="center island top" id="recorder" style="display: none;">
+					<!-- Display recording time -->
+					<button id="toggle" title="Stop recording - Ctrl + Shift + R" onclick="game.mediaRecorder.addEventListener('stop', event => (this.parentElement.style.setProperty('display', 'none'), document.querySelector('#game-overlay').checked = true));game.mediaRecorder.stop()">Stop recording</button>
+					<!-- <button class="toolbar-item recordstop" title="(Start/Stop??) Record - Ctrl + R" onclick="game.scene.removeCheckpoint()">🔴</button>
+					<button class="toolbar-item" title="Stop recording - Backspace" onclick="game.scene.removeCheckpoint()">◾</button>◼ /◾ -->
+				</section>
+				<section class="island left middle" id="toolbar">
+					<button class="toolbar-item" tooltip="Brush" kbd="a" data-tool="brush" data-options="line-style tool-settings" onclick="game.scene.toolHandler.setTool(this.dataset.tool, document.querySelector('#line-style .scenery > input[name=style]').checked)"><input type="radio" name="tool" hidden>●</button>
+					<button class="toolbar-item" tooltip="Line" kbd="q" data-tool="line" data-options="line-style" onclick="game.scene.toolHandler.setTool(this.dataset.tool, document.querySelector('#line-style .scenery > input[name=style]').checked)">
+						<input type="radio" name="tool" checked hidden>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+							<line x1="15" y1="1" x2="1" y2="15" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>
+						</svg>
+					</button>
+					<label class="toolbar-item" tooltip="Powerups" data-options="powerups" onchange="document.querySelector('[name=\'powerup\'][checked]').dispatchEvent(new Event('change', { bubbles: true }))"><input type="radio" name="tool" hidden>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+							<path d="M9 1L3 9H7L6 15L13 6H9L9 1Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+						</svg>
+					</label>
+					<label class="toolbar-item" tooltip="Grid" kbd="g">
+						<input type="checkbox" hidden onchange="game.scene.sectors.size = 11 - game.scene.sectors.size">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+							<path d="M15 1H9.5V6.5H15ZM6.5 1H1V6.5H6.5ZM15 9.5H9.5V15H15ZM6.5 9.5H1V15H6.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2"/>
+						</svg>
+					</label>
+					<button class="toolbar-item" tooltip="Eraser" kbd="e" data-tool="eraser" data-options="eraser-options tool-settings" onclick="game.scene.toolHandler.setTool(this.dataset.tool)">
+						<input type="radio" name="tool" hidden>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><circle cx="1" cy="1" r="1" fill="#ffb6c199"/></svg>
+					</button>
+					<button class="toolbar-item" tooltip="Change Vehicle" kbd="Ctrl+b" onclick="game.scene.switchBike()">
+						<svg viewBox="0 0 25 25" stroke="#777">
+							<circle cx="12.5" cy="12.5" r="10" fill="none" stroke="currentColor" stroke-width="2.5" />
+							<path d="M12.5 12.5L20.5 12.5
+								M12.5 12.5L19.43 16.5
+								M12.5 12.5L16.5 19.43
+								M12.5 12.5L12.5 20.5
+								M12.5 12.5L8.5 19.43
+								M12.5 12.5L5.57 16.5
+								M12.5 12.5L4.5 12.5
+								M12.5 12.5L5.57 8.5
+								M12.5 12.5L8.5 5.57
+								M12.5 12.5L12.5 4.5
+								M12.5 12.5L16.5 5.57
+								M12.5 12.5L19.43 8.5" />
+						</svg>
+					</button>
+					<button class="toolbar-item" tooltip="Camera" kbd="r" data-tool="camera" data-options="tool-settings" onclick="game.scene.toolHandler.setTool(this.dataset.tool)">
+						<input type="radio" name="tool" hidden>
+						<svg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" viewBox="0 0 16 16">
+							<circle cx="8" cy="8" r="5" fill="none"/>
+							<path d="M6.5 3 8 1l1.5 2m-3 10L8 15l1.5-2M3 6.5 1 8l2 1.5m10-3L15 8l-2 1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</button>
+				</section>
+				<section class="island middle right tool-options" id="tool-options">
+					<div id="powerups">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Target" onchange="game.scene.toolHandler.setTool('goal')" checked>
+							<svg width="1em" height="1em">
+								<defs>
+									<symbol id="powerup" viewBox="0 0 16 16">
+										<circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="2"/>
+									</symbol>
+								</defs>
+								<use href="#powerup" fill="#ff0"/>
+							</svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Checkpoint" onchange="game.scene.toolHandler.setTool('checkpoint')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#00f"/></svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Boost" onchange="game.scene.toolHandler.setTool('boost')">
+							<svg width="1em" height="1em">
+								<defs>
+									<symbol id="triangle-powerup" viewBox="0 0 16 16">
+										<path d="M1 3L15 8L1 13Z" stroke="currentColor" stroke-linejoin="round" stroke-width="2"/>
+									</symbol>
+								</defs>
+								<use href="#triangle-powerup" fill="#ff0"/>
+							</svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Gravity" onchange="game.scene.toolHandler.setTool('gravity')">
+							<svg width="1em" height="1em"><use href="#triangle-powerup" fill="#0f0"/></svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Bomb" onchange="game.scene.toolHandler.setTool('bomb')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#f00"/></svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Slow-motion" onchange="game.scene.toolHandler.setTool('slow-mo')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#eee"/></svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Anti-gravity" onchange="game.scene.toolHandler.setTool('antigravity')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#0ff"/></svg>
+						</smart-label>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Teleporter" onchange="game.scene.toolHandler.setTool('teleporter')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#f0f"/></svg>
+						</smart-label>
+					</div>
+					<div id="line-style" style="display:none">
+						<label class="toolbar-item" tooltip="Physics" onchange="game.scene.toolHandler.setTool(game.scene.toolHandler.selected, false)"><input type="radio" name="style" checked hidden>●</label>
+						<label class="toolbar-item scenery" tooltip="Scenery" onchange="game.scene.toolHandler.setTool(game.scene.toolHandler.selected, true)"><input type="radio" name="style" hidden>●</label>
+					</div>
+					<div id="tool-settings" style="display:none">
+						<button class="toolbar-item increment" tooltip="Increase length" kbd="a+scroll" onclick="game.scene.toolHandler.currentTool.scroll({ wheelDelta: 1 });">
+							<svg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 16 16">
+								<line x1="1" x2="15" y1="8" y2="8"/>
+								<line x1="8" x2="8" y1="1" y2="15"/>
+							</svg>
+						</button>
+						<button class="toolbar-item decrement" tooltip="Decrease length" kbd="a+Scroll" onclick="game.scene.toolHandler.currentTool.scroll({ wheelDelta: -1 });">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+								<line x1="1" x2="15" y1="8" y2="8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+							</svg>
+						</button>
+						<div id="eraser-options">
+							<label class="toolbar-item brush" tooltip="Erase track - Enabled">
+								<input type="checkbox" checked hidden onchange="game.scene.toolHandler.currentTool.ignoring[game.scene.toolHandler.currentTool.ignoring.has('physics') ? 'delete' : 'add']('physics')">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+									<line x1="15" y1="1" x2="1" y2="15" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>
+								</svg>
+							</label>
+							<label class="toolbar-item scenery brush" tooltip="Erase foreground - Enabled">
+								<input type="checkbox" checked hidden onchange="game.scene.toolHandler.currentTool.ignoring[game.scene.toolHandler.currentTool.ignoring.has('scenery') ? 'delete' : 'add']('scenery')">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+									<line x1="15" y1="1" x2="1" y2="15" stroke="#808080" stroke-linecap="round" stroke-width="2"/>
+								</svg>
+							</label>
+							<label class="toolbar-item powerups" tooltip="Erase powerups - Enabled">
+								<input type="checkbox" checked hidden onchange="game.scene.toolHandler.currentTool.ignoring[game.scene.toolHandler.currentTool.ignoring.has('powerups') ? 'delete' : 'add']('powerups')">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+									<path d="M9 1L3 9H7L6 15L13 6H9L9 1Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+								</svg>
+							</label>
+						</div>
+					</div>
+					<button class="toolbar-item pip" tooltip="Picture in picture" onclick="game.togglePictureInPicture()">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linejoin="round" viewBox="0 0 16 16">
+							<path d="M15 2.5H1V13.5H15Z" opacity=".85" stroke-width="2"/>
+							<path d="M12.5 7.5H7.5V11H12.5Z" stroke-width="1.5"/>
+						</svg>
+					</button>
+					<button class="toolbar-item fullscreen" tooltip="Fullscreen" kbd="f" onclick="document.fullscreenElement ? document.exitFullscreen() : game.container.requestFullscreen()">
+						<!-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+							<path d="M4.5 1H1V4.5M1 1L6 6M10 10L15 15M15 11.5V15H11.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+						</svg> -->
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+							<path d="M15 6.5V1H9.5M6.5 1H1V6.5M1 9.5V15H6.5M9.5 15H15V9.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2"/>
+						</svg>
+					</button>
+				</section>
+				<!-- <input type="range" class="bottom timebar" style="left: 0;margin: 0;position: absolute;right: 0;"> -->
+			</div>
+			<progress class="replay-progress" max="100" min="0" value="40" style="display: none;"></progress>
+		</div>
+		<div class="overlay">
 			<input type="checkbox" id="game-overlay" hidden>
 			<nav>
-				<!-- Track upload tab -->
-				<label class="ripple" for="track">Track</label>
-				<label class="ripple" for="ghost">Ghost</label>
+				<!-- Track upload tab? -->
+				<label class="ripple" for="editor">Editor</label>
+				<label class="ripple" for="replay">Replay</label>
+				<label class="ripple" for="controls">Controls</label>
 				<label class="ripple" for="recorder-toggle">Recorder</label>
 				<label class="ripple" for="settings">Settings</label>
-				<label class="ripple" for="debug">Debug</label>
 			</nav>
 			<section>
-				<input type="radio" name="game-overlay-nav" id="track" hidden checked>
-				<div style="display: grid;grid-gap: .125rem;grid-template-columns: repeat(auto-fit, minmax(25vmin, 1fr));">
-					<!-- Toggle move/edit mode button -->
-					<label>Transform Mode<input type="checkbox" onchange="game.scene.transformMode = event.target.checked"></label>
-					<button onclick="confirm('Do you really want to start a new track?') && game.reset()" style="background-color: hsl(0deg 40% 40% / calc(50% + 10% * var(--brightness-multiplier)));">Clear</button>
-					<button onclick="trackdialog.showModal()">Load</button>
-					<button onclick="game.openFile({ multiple: event.ctrlKey })">Open File...</button>
-					<!-- Open folder option allowing users to work on multiple tracks at once w/ different layers.
-						This could help with "stop motion" tracks -->
-					<button onclick="code.value = game.scene.toString();trackdialog.showModal();">Save</button>
-					<button onclick="game.saveAs()">Save As...</button>
-					<button onclick="game.showRecentFiles()">Show Recent Files</button>
-					<button id="upload">Upload</button>
-					<script>
-						upload.addEventListener('click', function () {
-                            const code = game.scene.toString();
-                            if (code.length < 1e3) {
-                                return alert("Sorry, but your track must be bigger or more detailed.");
-                            } else if (game.scene.targets < 1) {
-                                return alert("Sorry, but your track must have at least 1 target!");
-                            }
+				<input type="radio" name="game-overlay-nav" id="editor" hidden checked>
+				<!-- Toggle move/edit mode button -->
+				<label>Transform Mode<input type="checkbox" onchange="game.scene.transformMode = event.target.checked"></label>
+				<button class="danger" onclick="confirm('Do you really want to start a new track?') && game.reset()">Clear</button>
+				<button onclick="trackdialog.showModal()">Load</button>
+				<button onclick="game.openFile({ multiple: event.ctrlKey })">Open File...</button>
+				<!-- Open folder option allowing users to work on multiple tracks at once w/ different layers.
+					This could help with "stop motion" tracks -->
+				<button onclick="code.value = game.scene.toString();trackdialog.showModal();">Save</button>
+				<button onclick="game.saveAs()">Save As...</button>
+				<button onclick="game.showRecentFiles()">Show Recent Files</button>
+				<button id="upload">Upload</button>
+				<script>
+					upload.addEventListener('click', function () {
+						const code = game.scene.toString();
+						if (code.length < 1e3) {
+							return alert("Sorry, but your track must be bigger or more detailed.");
+						} else if (game.scene.targets < 1) {
+							return alert("Sorry, but your track must have at least 1 target!");
+						}
 
-                            // add 'collaborators' input
-                            game.scene.paused = true;
-                            game.scene.toolHandler.setTool('camera');
-                            game.scene.pictureMode = {width: 250, height: 150};
-                            game.scene.zoom = 0.6 * window.devicePixelRatio;
-                            game.scene.grid.sectors.forEach(sector => sector.rendered = false);
-                            document.getElementById('track_menu')?.style.setAttribute('display', 'none');
-                            var container = document.createElement('div');
-                            container.setAttribute('id', 'track_menu');
-                            container.style.setProperty('display', 'flex');
-                            container.style.setProperty('flex-direction', 'column');
-                            var select = Object.assign(document.createElement('select'), {
-                                id: 'visibility'
-                            });
-                            select.style.setProperty('width', '-webkit-fill-available');
-                            select.append(...[
-                                Object.assign(document.createElement('option'), {
-                                    disabled: true,
-                                    innerText: 'Visibility'
-                                }),
-                                Object.assign(document.createElement('option'), {
-                                    innerText: 'Public',
-                                    value: 'public'
-                                }),
-                                Object.assign(document.createElement('option'), {
-                                    innerText: 'Private',
-                                    value: 'private'
-                                })
-                            ]);
+						// add 'collaborators' input
+						game.scene.paused = true;
+						game.scene.toolHandler.setTool('camera');
+						game.scene.pictureMode = {width: 250, height: 150};
+						game.scene.zoom = 0.6 * window.devicePixelRatio;
+						game.scene.sectors.sectors.forEach(sector => sector.rendered = false);
+						document.getElementById('track_menu')?.style.setAttribute('display', 'none');
+						var container = document.createElement('div');
+						container.setAttribute('id', 'track_menu');
+						container.style.setProperty('display', 'flex');
+						container.style.setProperty('flex-direction', 'column');
+						var select = Object.assign(document.createElement('select'), {
+							id: 'visibility'
+						});
+						select.style.setProperty('width', '-webkit-fill-available');
+						select.append(...[
+							Object.assign(document.createElement('option'), {
+								disabled: true,
+								innerText: 'Visibility'
+							}),
+							Object.assign(document.createElement('option'), {
+								innerText: 'Public',
+								value: 'public'
+							}),
+							Object.assign(document.createElement('option'), {
+								innerText: 'Private',
+								value: 'private'
+							})
+						]);
 
-                            container.append(...[
-                                Object.assign(document.createElement('input'), {
-                                    id: 'title',
-                                    placeholder: 'Title',
-                                    type: 'text',
-                                    onkeydown: event => event.stopPropagation(),
-                                    onkeypress: event => event.stopPropagation(),
-                                    onkeyup: event => event.stopPropagation()
-                                }),
-                                Object.assign(document.createElement('textarea'), {
-                                    id: 'description',
-                                    placeholder: 'Description',
-                                    rows: 4,
-                                    onkeydown: event => event.stopPropagation(),
-                                    onkeypress: event => event.stopPropagation(),
-                                    onkeyup: event => event.stopPropagation()
-                                }),
-                                select,
-                                Object.assign(document.createElement('button'), {
-                                    innerText: 'Publish',
-                                    onclick() {
-                                        const title = document.querySelector('#track_menu #title');
-                                        if (title.value.length < 4)
-                                            return alert("The track name is too short!");
+						container.append(...[
+							Object.assign(document.createElement('input'), {
+								id: 'title',
+								placeholder: 'Title',
+								type: 'text',
+								onkeydown: event => event.stopPropagation(),
+								onkeypress: event => event.stopPropagation(),
+								onkeyup: event => event.stopPropagation()
+							}),
+							Object.assign(document.createElement('textarea'), {
+								id: 'description',
+								placeholder: 'Description',
+								rows: 4,
+								onkeydown: event => event.stopPropagation(),
+								onkeypress: event => event.stopPropagation(),
+								onkeyup: event => event.stopPropagation()
+							}),
+							select,
+							Object.assign(document.createElement('button'), {
+								innerText: 'Publish',
+								onclick() {
+									const title = document.querySelector('#track_menu #title');
+									if (title.value.length < 4)
+										return alert("The track name is too short!");
 
-                                        const description = document.querySelector('#track_menu #description');
-                                        if (description.value.length < 16)
-                                            return alert("The track description is too short!");
+									const description = document.querySelector('#track_menu #description');
+									if (description.value.length < 16)
+										return alert("The track description is too short!");
 
-                                        const visibility = document.querySelector('#track_menu #visibility');
-                                        const canvas = document.createElement('canvas');
-                                        canvas.width = 250;
-                                        canvas.height = 150;
-                                        const ctx = canvas.getContext('2d');
-                                        ctx.fillStyle = game.canvas.computedStyleMap().get('background-color').toString();
-                                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                        ctx.drawImage(game.canvas, game.canvas.width / 2 - canvas.width / 2, game.canvas.height / 2 - canvas.height / 2, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-                                        game.scene.pictureMode = false;
-                                        this.disabled = true;
-                                        fetch('/api/tracks/upload.php', {
-                                            method: 'post',
-                                            body: new URLSearchParams({
-                                                name: title.value,
-                                                code,
-                                                description: description.value,
-                                                display: visibility.value,
-                                                thumbnail: canvas.toDataURL('image/jpeg')
-                                            })
-                                        }).then(r => r.text()).then(r => {
-                                            if (+r === 1) {
-                                                location.href = '/';
-                                            } else {
-                                                this.disabled = false;
-                                                const error = document.createElement('p');
-                                                error.classList.add('error');
-                                                error.innerText = r;
-                                                this.after(error);
-                                                setTimeout(() => {
-                                                    error.remove()
-                                                }, 5e3);
-                                                // document.write("Something went wrong!");
-                                            }
-                                        });
-                                    }
-                                })
-                            ]);
-                            this.replaceWith(container);
-                        });
-					</script>
-				</div>
+									const visibility = document.querySelector('#track_menu #visibility');
+									const canvas = document.createElement('canvas');
+									canvas.width = 250;
+									canvas.height = 150;
+									const ctx = canvas.getContext('2d');
+									ctx.fillStyle = game.canvas.computedStyleMap().get('background-color').toString();
+									ctx.fillRect(0, 0, canvas.width, canvas.height);
+									ctx.drawImage(game.canvas, game.canvas.width / 2 - canvas.width / 2, game.canvas.height / 2 - canvas.height / 2, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+									game.scene.pictureMode = false;
+									this.disabled = true;
+									fetch('/api/tracks/upload.php', {
+										method: 'post',
+										body: new URLSearchParams({
+											name: title.value,
+											code,
+											description: description.value,
+											display: visibility.value,
+											thumbnail: canvas.toDataURL('image/jpeg')
+										})
+									}).then(r => r.text()).then(r => {
+										if (+r === 1) {
+											location.href = '/';
+										} else {
+											this.disabled = false;
+											const error = document.createElement('p');
+											error.classList.add('error');
+											error.innerText = r;
+											this.after(error);
+											setTimeout(() => {
+												error.remove()
+											}, 5e3);
+											// document.write("Something went wrong!");
+										}
+									});
+								}
+							})
+						]);
+						this.replaceWith(container);
+					});
+				</script>
 				<!-- Display recently opened tracks -->
-				<dialog class="bhr-dialog" id="trackdialog" onclose="event.target.returnValue == 'default' && (game.load(code.value),document.querySelector('#game-overlay').checked = false),code.value = null">
-					<form method="dialog" style="margin: 0;">
+				<dialog id="trackdialog" onclose="event.target.returnValue == 'default' && (game.load(code.value),document.querySelector('#game-overlay').checked = false),code.value = null">
+					<h2>Load track</h2>
+					<form method="dialog">
 						<div class="input-container">
 							<textarea class="track-input" placeholder="Code" cols="30" rows="7" id="code" ondrop="Promise.all(Array.from(event.dataTransfer.items).filter(({ kind }) => kind === 'file').map(item => item.getAsFileSystemHandle())).then(fileHandles => game.loadFile({ fileHandles }));" oninput="this.nextElementSibling.innerText = Math.round(this.value.length / 1e3);" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()"></textarea>
 							<span class="char-counter" title="Size">0</span>
@@ -158,8 +322,9 @@
 						</div>
 					</form>
 				</dialog>
-				<dialog class="bhr-dialog" id="loadrecenttracks" onclose="event.target.returnValue != 'cancel' && (document.querySelector('#game-overlay').checked = false)">
-					<form method="dialog" style="margin: 0;">
+				<dialog id="loadrecenttracks" onclose="event.target.returnValue != 'cancel' && (document.querySelector('#game-overlay').checked = false)">
+					<h2>Recent works</h2>
+					<form method="dialog">
 						<!-- Show last opened time + other metadata possibly in a table -->
 						<div id="recenttracks" style="display: grid;"></div>
 						<div style="display: flex;gap: .25rem;margin-top: .25rem;">
@@ -169,32 +334,31 @@
 					</form>
 				</dialog>
 			</section>
-			<section style="display: none;">
-				<input type="radio" name="game-overlay-nav" id="ghost" hidden>
+			<section>
+				<input type="radio" name="game-overlay-nav" id="replay" hidden>
 				<!-- Display races (game.scene.races/game.scene.players/game.scene.ghosts) -->
-				<div style="display: grid;grid-gap: .125rem;grid-template-columns: repeat(auto-fit, minmax(25vmin, 1fr));">
-					<button onclick="game.scene.ghosts.splice(0);" style="background-color: hsl(0deg 40% 40% / calc(50% + 10% * var(--brightness-multiplier)));">Clear</button>
-					<button onclick="gcode.nextElementSibling.lastElementChild.style.setProperty('display', 'none');gcode.nextElementSibling.lastElementChild.previousElementSibling.style.removeProperty('display');ghostdialog.showModal();">Load</button>
-					<button onclick="
-						Object.assign(document.createElement('input'), {
-							accept: 'text/plain',
-							type: 'file',
-							onchange: async event => {
-								for (const file of event.target.files) {
-									game.scene.watchGhost(await file.text());
-								}
+				<button disabled onclick="game.scene.ghosts.splice(0);" style="background-color: hsl(0deg 40% 40% / calc(50% + 10% * var(--brightness-multiplier)));">Clear</button>
+				<button onclick="gcode.nextElementSibling.lastElementChild.style.setProperty('display', 'none');gcode.nextElementSibling.lastElementChild.previousElementSibling.style.removeProperty('display');ghostdialog.showModal();">Load</button>
+				<button onclick="
+					Object.assign(document.createElement('input'), {
+						accept: 'text/plain',
+						type: 'file',
+						onchange: async event => {
+							for (const file of event.target.files) {
+								game.scene.watchGhost(await file.text());
 							}
-						}).click();
-					">Load File...</button>
-					<button onclick="gcode.value = game.scene.firstPlayer.records.map(record => Array.from(record).join(' ')).join(',') + ',' + game.scene.currentTime + ',' + game.scene.firstPlayer.vehicle.name;gcode.nextElementSibling.lastElementChild.style.removeProperty('display');gcode.nextElementSibling.lastElementChild.previousElementSibling.style.setProperty('display', 'none');ghostdialog.showModal();">Save</button>
-					<button onclick="
-						Object.assign(document.createElement('a'), {
-							download: 'bhr_ghost-' + new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium' }).format().replace(/[/:]/g, '-').replace(/,+\s*/, '_').replace(/\s+.*$/, ''),
-							href: window.URL.createObjectURL(new Blob([gcode.value], { type: 'text/plain' }))
-						}).click();
-					">Save As...</button>
-				</div>
-				<dialog class="bhr-dialog" id="ghostdialog" onclose="event.target.returnValue == 'default' && (game.scene.watchGhost(gcode.value),document.querySelector('#game-overlay').checked = false),gcode.value = null">
+						}
+					}).click();
+				">Load File...</button>
+				<button onclick="gcode.value = game.scene.firstPlayer.records.map(record => Array.from(record).join(' ')).join(',') + ',' + game.scene.currentTime + ',' + game.scene.firstPlayer.vehicle.name;gcode.nextElementSibling.lastElementChild.style.removeProperty('display');gcode.nextElementSibling.lastElementChild.previousElementSibling.style.setProperty('display', 'none');ghostdialog.showModal();">Save</button>
+				<button onclick="
+					Object.assign(document.createElement('a'), {
+						download: 'bhr_ghost-' + new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium' }).format().replace(/[/:]/g, '-').replace(/,+\s*/, '_').replace(/\s+.*$/, ''),
+						href: window.URL.createObjectURL(new Blob([gcode.value], { type: 'text/plain' }))
+					}).click();
+				">Save As...</button>
+				<dialog id="ghostdialog" onclose="event.target.returnValue == 'default' && (game.scene.watchGhost(gcode.value),document.querySelector('#game-overlay').checked = false),gcode.value = null">
+					<h2>Load replay</h2>
 					<form method="dialog" style="margin: 0;">
 						<textarea placeholder="Ghost data" cols="30" rows="7" id="gcode" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()"></textarea>
 						<div style="display: flex;gap: .25rem;margin-top: .25rem;">
@@ -210,12 +374,16 @@
 					</form>
 				</dialog>
 			</section>
-			<section style="display: none;">
+			<section>
+				<input type="radio" name="game-overlay-nav" id="controls" hidden>
+				<!-- https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/kbd -->
+			</section>
+			<section>
 				<input type="radio" name="game-overlay-nav" id="recorder-toggle" hidden>
 				<button style="width: -webkit-fill-available;" onclick="game.createRecorder(blobURL => (download.href = blobURL) && loadrecording.showModal()).start(),recorder.style.removeProperty('display'),document.querySelector('#game-overlay').checked = false" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()">Start Recorder</button>
 				<label>FPS&emsp;<input type="number" min="10" max="300" step="10" value="50"></label>
 				<button style="width: -webkit-fill-available;" disabled><a download="bhr_recording" id="adownload">Download</a></button>
-				<dialog class="bhr-dialog" id="loadrecording">
+				<dialog id="loadrecording">
 					<form method="dialog" style="margin: 0;">
 						<button style="width: -webkit-fill-available;"><a download="bhr_recording" id="download">Download</a></button>
 						<div style="display: flex;gap: .25rem;margin-top: .25rem;">
@@ -224,44 +392,58 @@
 					</form>
 				</dialog>
 			</section>
-			<section style="display: none;gap: 1rem;">
+			<section style="gap: 1rem;">
 				<input type="radio" name="game-overlay-nav" id="settings" hidden>
-				<!-- Add section for Discord RPC -->
 				<section title="Editor">
-					<label>Auto save<input type="checkbox" id="auto-save" onchange="game.settings.autoSave = event.target.checked;"></label>
-					<!-- Hide if auto save is not checked -->
-					<label>Interval<input type="number" id="auto-save-interval" min="5" value="5" max="60" style="box-sizing: content-box;max-width: 2rem;" onchange="game.settings.autoSave = event.target.checked;"></label>
+					<label dependant="next-element">Auto save<input type="checkbox" id="auto-save" onchange="game.settings.autoSave = event.target.checked;"></label>
+					<label dependency="previous-element">Interval<input type="number" id="auto-save-interval" min="5" value="5" max="60" style="box-sizing: content-box;max-width: 2rem;" onchange="game.settings.autoSaveInterval = event.target.value;"></label>
+					<label class="disabled">Continue where you left off<input type="checkbox" id="game-settings.restore-previous-session" onchange="game.settings.restorePreviousSession = event.target.checked;" disabled=""></label>
 				</section>
 				<section title="Game">
 					<label>Auto pause<input type="checkbox" id="auto-pause" onchange="game.settings.autoPause = event.target.checked"></label>
+					<label class="disabled">Linear Interpolation<input type="checkbox" id="game-settings.interpolation" checked disabled onchange="game.settings.interpolation = event.target.checked"></label>
+					<label dependant="next-element">Limit FPS<input type="checkbox" id="limit-fps" onchange="game.settings.limitFPS = event.target.checked"></label>
+					<label dependency="previous-element">FPS<input type="number" id="fps" min="0" value="60" style="box-sizing: content-box;max-width: 2.5rem;" onchange="game.settings.fps = event.target.value;"></label>
+					<label>Hide HUD<input type="checkbox" id="hide-hud" onchange="game.settings.hideHUD = event.target.checked"></label>
 				</section>
 				<section title="Appearance">
-					<label class="disabled">System<input type="radio" name="bhr-theme" id="system" onchange="game.settings.theme = event.target.id" checked disabled></label>
-					<label>Dark<input type="radio" name="bhr-theme" id="dark" onchange="game.settings.theme = event.target.id"></label>
-					<label>Light<input type="radio" name="bhr-theme" id="light" onchange="game.settings.theme = event.target.id"></label>
-					<label>Midnight<input type="radio" name="bhr-theme" id="midnight" onchange="game.settings.theme = event.target.id"></label>
+					<label>System<input type="radio" name="color-scheme" id="system" onchange="game.settings.theme = event.target.id" checked></label>
+					<label class="disabled">Auto<input type="radio" name="color-scheme" id="auto" disabled onchange="game.settings.theme = event.target.id"></label>
+					<label>Dark<input type="radio" name="color-scheme" id="dark" onchange="game.settings.theme = event.target.id"></label>
+					<label>Light<input type="radio" name="color-scheme" id="light" onchange="game.settings.theme = event.target.id"></label>
+					<label>Midnight<input type="radio" name="color-scheme" id="midnight" onchange="game.settings.theme = event.target.id"></label>
+					<label>Custom<input type="radio" name="color-scheme" id="custom" onchange="game.settings.theme = event.target.id"></label>
+					<br>
+					<label>Brightness<input type="range" id="game-settings.brightness" min="1" value="100" max="100" onchange="game.settings.brightness = event.target.value"></label>
+					<label class="disabled">Vignette<input type="checkbox" id="game-settings.vignette" checked disabled onchange="game.settings.vignette = event.target.checked"></label>
 				</section>
 				<section title="Miscellaneous">
-					<label>Discord Rich Presence<input type="checkbox" id="auto-pause" onchange="game.settings.autoPause = event.target.checked" checked></label>
+					<label>Discord Rich Presence<input type="checkbox" id="discord-rich-presence" checked onchange="game.settings.discordRichPresence = event.target.checked"></label>
 				</section>
-			</section>
-			<section style="display: none;gap: 1rem;">
-				<input type="radio" name="game-overlay-nav" id="debug" hidden>
-				<label>Display FPS<input type="checkbox" id="display-fps" onchange="game.settings.displayFPS = event.target.checked"></label>
+				<section title="Debug">
+					<label>Display FPS<input type="checkbox" id="display-fps" onchange="game.settings.displayFPS = event.target.checked"></label>
+				</section>
 			</section>
 			<button id="exit" style="margin: 1rem;max-width: 25vmin;" onclick="window.close()">Exit to desktop</button>
 		</div>
 		<div class="toast-container" id="toasts"></div>
-	</div>
+	</bhr-instance>
 	<script type="module" src="bootstrap.js"></script>
-	<script type="module">
-		// const demo = await fetch('demo/track.txt').then(r => r.text());
-		// // game.once('load', async function() {
-		// // 	const demoGhost = await fetch('demo/ghost.txt').then(r => r.text());
-		// // 	this.scene.watchGhost(demoGhost);
-		// // });
-		// game.init({ code: demo, write: true });
-		game.init({ default: true, write: true });
+	<script>
+		const gameContainer = document.querySelector('#game-container');
+
+		gameContainer.addEventListener('ready', async function({ detail: game }) {
+			const searchParams = new URLSearchParams(location.search);
+			if (searchParams.has('demo')) {
+				const demo = await fetch('demo/track.txt').then(r => r.text());
+				// game.once('load', async function() {
+				// 	const demoGhost = await fetch('demo/ghost.txt').then(r => r.text());
+				// 	this.scene.watchGhost(demoGhost);
+				// });
+				game.init({ code: demo, write: true });
+			} else
+				game.init({ default: true, write: true });
+		});
 	</script>
 </body>
 </html>

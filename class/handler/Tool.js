@@ -10,9 +10,10 @@ import Rectangle from "../tools/Rectangle.js";
 import Select from "../tools/Select.js";
 import TrianglePowerup from "../tools/TrianglePowerup.js";
 import Teleporter from "../tools/Teleporter.js";
+import CSSCursor from "../core/ui/CSSCursor.js";
 
 export default class ToolHandler {
-	cache = new Map();
+	cache = new Map;
 	old = 'camera';
 	selected = 'camera';
 	constructor(parent) {
@@ -43,7 +44,7 @@ export default class ToolHandler {
 	}
 
 	_setCursor(cursor) {
-		this.scene.parent.canvas.style.setProperty('cursor', cursor || 'none');
+		this.scene.game.canvas.style.setProperty('cursor', cursor || 'none');
 	}
 
 	setTool(name, style = null) {
@@ -54,26 +55,14 @@ export default class ToolHandler {
 		}
 
 		this.currentTool.update();
-		// const powerups = this.scene.parent.gui.querySelector('#powerups');
-		// powerups !== null && powerups.style.setProperty('display', /^(antigravity|bo(mb|ost)|checkpoint|g(oal|ravity)|slow-mo|teleporter)$/i.test(this.selected) ? 'contents' : 'none');
-
-		let settings = this.scene.parent.gui.querySelector('.toolbar #tool-settings');
-		settings.style.setProperty('display', /^(brush|camera|circle|eraser)$/i.test(this.selected) ? 'contents' : 'none'),
-		settings = settings.querySelector('div[data-id=eraser]'),
-		settings.style.setProperty('display', this.selected == 'eraser' ? 'contents' : 'none');
-
-		const tool = this.scene.parent.gui.querySelector(`.toolbar-item${style ? '.scenery' : ''}.${name} > input[type=radio]`);
-		tool !== null && tool.checked !== true && (tool.checked = true);
 
 		const cursor = this.currentTool.constructor.cursor || (['brush', 'circle', 'curve', 'ellipse', 'rectangle', 'select'].includes(this.selected) ? Line.cursor : null);
-		if (cursor === Line.cursor) {
-			const theme = this.scene.parent.settings.theme
-				, physics = '#'.padEnd(7, /^dark$/i.test(theme) ? 'fb' : /^midnight$/i.test(theme) ? 'c' : '0')
-				, scenery = '#'.padEnd(7, /^(dark|midnight)$/i.test(theme) ? '6' : 'a');
-			cursor.stroke = style ? scenery : physics;
+		if (cursor instanceof CSSCursor) {
+			cursor.stroke = this.scene.game.colorScheme.palette[style ? 'foreground' : 'track'];
 		}
 
 		this._setCursor(cursor || 'none');
+		this.scene.game.emit('toolSelectionChange', name, this.old);
 	}
 
 	scroll() {
@@ -82,7 +71,7 @@ export default class ToolHandler {
 
 	press(event) {
 		this.currentTool.press(...arguments);
-		event.button === 0 && this.scene.parent.container.classList.add('pointer-down');
+		event.button === 0 && this.scene.game.container.classList.add('pointer-down');
 	}
 
 	stroke() {
@@ -91,7 +80,7 @@ export default class ToolHandler {
 
 	clip(event) {
 		this.currentTool.clip(...arguments);
-		event.button === 0 && this.scene.parent.container.classList.remove('pointer-down');
+		event.button === 0 && this.scene.game.container.classList.remove('pointer-down');
 	}
 
 	update() {
@@ -100,16 +89,13 @@ export default class ToolHandler {
 
 	draw(ctx) {
 		this.currentTool.draw(ctx);
-		if (!this.scene.parent.mouse.locked) return;
-		const position = this.scene.parent.mouse.rawPosition;
-		ctx.beginPath()
-		ctx.moveTo(position.x - 10 * window.devicePixelRatio, position.y)
-		ctx.lineTo(position.x + 10 * window.devicePixelRatio, position.y)
-		ctx.moveTo(position.x, position.y + 10 * window.devicePixelRatio)
-		ctx.lineTo(position.x, position.y - 10 * window.devicePixelRatio)
-		ctx.save()
-		ctx.lineWidth = 2 * window.devicePixelRatio
-		ctx.stroke()
-		ctx.restore();
+		if (!this.scene.game.mouse.locked) return;
+		const position = this.scene.game.mouse.rawPosition;
+		ctx.beginPath();
+		ctx.moveTo(position.x - 10 * window.devicePixelRatio, position.y);
+		ctx.lineTo(position.x + 10 * window.devicePixelRatio, position.y);
+		ctx.moveTo(position.x, position.y + 10 * window.devicePixelRatio);
+		ctx.lineTo(position.x, position.y - 10 * window.devicePixelRatio);
+		ctx.stroke();
 	}
 }

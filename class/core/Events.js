@@ -14,5 +14,6 @@ export default {
 	StateChange: 'stateChange',
 	Stats: 'stats',
 	Tick: 'tick',
+	ToolSelectionChange: 'toolSelectionChange',
 	Unpause: 'gameUnpause'
 }

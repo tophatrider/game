@@ -30,6 +30,10 @@ export default class StaticInput extends EventRelay {
 
 	dispose() {
 		this.downKeys.clear();
+	}
+
+	destroy() {
+		this.dispose();
 		this.downKeys = null;
 		this.keymap = null;
 	}

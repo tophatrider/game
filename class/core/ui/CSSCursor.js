@@ -1,32 +1,51 @@
+const normalizeAttributes = attr => {
+	const attributes = [];
+	for (const key in attr) {
+		let attrName = key.toLowerCase();
+		switch (attrName) {
+		case 'strokelinecap':
+		case 'strokelinejoin':
+		case 'strokewidth':
+			attrName = attrName.replace(/^(\w{6})/, '$1-');
+		}
+
+		attributes.push([attrName, attr[key]]);
+	}
+
+	return attributes;
+};
+const stringifyAttributes = attr => attr.length > 0 ? ' ' + attr.map(([key, value]) => `${key}="${encodeURIComponent(value)}"`).join(' ') : '';
+
 export default class CSSCursor {
-	constructor(tag, options = {}) {
+	constructor(children, options = {}) {
+		if (!Array.isArray(children))
+			throw new TypeError('First positional argument, children, must be of type: Array');
+
 		Object.defineProperties(this, {
-			size: { value: 32, writable: true },
-			tag: { value: tag || 'path', writable: true }
+			children: { value: [...children], writable: true },
+			size: { value: 32, writable: true }
 		});
 		Object.assign(this, options);
 	}
 
-	toString() {
-		const masterAttributes = [];
-		for (const key in this) {
-			let attrName = key;
-			switch (key.toLowerCase()) {
-			case 'strokelinecap':
-				attrName = 'stroke-linecap';
-				break;
-			case 'strokelinejoin':
-				attrName = 'stroke-linejoin';
-				break;
-			case 'strokewidth':
-				attrName = 'stroke-width';
-			}
+	addChild(tag, attributes) {
+		this.children.push([tag, attributes]);
+	}
 
-			masterAttributes.push([attrName, this[key]]);
+	toSVG() {
+		const masterAttributes = normalizeAttributes(this);
+
+		let raw = '';
+		for (const [tag, attr] of this.children) {
+			const attributes = normalizeAttributes(attr);
+			raw += `<${tag}${stringifyAttributes(attributes)}/>`;
 		}
 
-		const raw = `<${this.tag}${masterAttributes.length > 0 ? ' ' + masterAttributes.map(([key, value]) => `${key}="${encodeURIComponent(value)}"`).join(' ') : ''}/>`
-			, halfSize = this.size / 2;
-		return `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${this.size}" height="${this.size}">${raw}</svg>') ${halfSize} ${halfSize}, auto`;
+		return `<svg xmlns="http://www.w3.org/2000/svg"${stringifyAttributes(masterAttributes)} width="${this.size}" height="${this.size}">${raw}</svg>`;
+	}
+
+	toString() {
+		const halfSize = this.size / 2;
+		return `url('data:image/svg+xml;utf8,${this.toSVG()}') ${halfSize} ${halfSize}, auto`;
 	}
 }

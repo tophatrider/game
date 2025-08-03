@@ -1,5 +1,5 @@
 import Tool from "./Tool.js";
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
 
 export default class extends Tool {
 	anchor = null;
@@ -19,9 +19,9 @@ export default class extends Tool {
 			typeof this.selected[type] == 'object' && this.selected[type].splice(0);
 		}
 
-		let min = new Vector(this.points[0], this.points[1]).toCanvas(this.scene.parent.canvas);
-		let max = new Vector(this.points[0] + this.points[2], this.points[1] + this.points[3]).toCanvas(this.scene.parent.canvas);
-		for (const sector of this.scene.grid.range(min.map(value => Math.floor(value / this.scene.grid.scale)), max.map(value => Math.floor(value / this.scene.grid.scale))).filter(sector => sector.physics.length + sector.scenery.length > 0)) {
+		let min = new Vector(this.points[0], this.points[1]).toCanvas(this.scene.game.canvas);
+		let max = new Vector(this.points[0] + this.points[2], this.points[1] + this.points[3]).toCanvas(this.scene.game.canvas);
+		for (const sector of this.scene.sectors.range(min.map(value => Math.floor(value / this.scene.sectors.scale)), max.map(value => Math.floor(value / this.scene.sectors.scale))).filter(sector => sector.physics.length + sector.scenery.length > 0)) {
 			const types = sector.search(min, max);
 			for (const type in types) {
 				typeof this.selected[type] == 'object' && this.selected[type].push(...types[type].filter(object => this.selected[type].indexOf(object) === -1));

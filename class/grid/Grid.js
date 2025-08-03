@@ -1,58 +1,18 @@
-import Vector from "../core/math/Vector.js";
-import PhysicsLine from "../items/line/PhysicsLine.js";
-import SceneryLine from "../items/line/SceneryLine.js";
-import Sector from "./sector/Sector.js";
+import Vector from "../core/geometry/Vector.js";
+import Sector from "./oldSector.js";
 
-// use worker to cache grid?
-export default class {
-	rows = new Map();
+export default class Grid {
+	columns = new Map;
 	scale = 100;
-	scene = null;
 	size = 1;
-	helper = new Worker("./class/grid/GridHelper.js");
+	visible = [];
 	constructor(parent) {
-		this.scene = parent;
-		this.helper.addEventListener('message', ({ data }) => {
-			switch(data.event) {
-				// case 'ADD_LINE': {
-				// 	for (let coords of data.sectors) {
-				// 		let sector = this.sector(coords.x, coords.y);
-				// 		sector[data.type].push(new (data.type === 'scenery' ? SceneryLine : PhysicsLine)(data.start.x, data.start.y, data.end.x, data.end.y, this.scene));
-				// 	}
-				// 	break;
-				// }
-
-				// case 'ADD_LINES': {
-				// 	for (let line of data.combined) {
-				// 		for (let coords of line.sectors) {
-				// 			let sector = this.sector(coords.x, coords.y);
-				// 			sector[data.type].push(new (data.type !== 'scenery' ? PhysicsLine : SceneryLine)(data.start.x, data.start.y, data.end.x, data.end.y, this.scene));
-				// 			sector.rendered = false;
-				// 		}
-				// 	}
-				// 	break;
-				// }
-
-				case 'INSERT_LINE': {
-					let sector = this.sector(data.sector.x, data.sector.y);
-					sector[data.type].push(new (data.type !== 'scenery' ? PhysicsLine : SceneryLine)(data.start.x, data.start.y, data.end.x, data.end.y, this.scene));
-					// sector.rendered = false;
-					break;
-				}
-
-				case 'SECTOR_CACHED': {
-					let sector = this.sector(data.row, data.column);
-					// sector.image = data.image;
-					// sector.rendered = true;
-					break;
-				}
-			}
-		});
+		Object.defineProperty(this, 'scene', { value: parent, writable: true });
 	}
 
 	get sectors() {
 		let sectors = [];
-		for (const row of this.rows.values()) {
+		for (const row of this.columns.values()) {
 			for (const sector of row.values()) {
 				sectors.push(sector);
 			}
@@ -61,23 +21,39 @@ export default class {
 		return sectors;
 	}
 
+	updateVisible() {
+		// const camera = this.scene.camera;
+		// const { viewportWidth, viewportHeight } = camera;
+
+		// const topLeft = camera.toWorld(0, 0);
+		// const bottomRight = camera.toWorld(viewportWidth, viewportHeight);
+
+		// const min = new Vector(topLeft.x, topLeft.y).downScale(this.scale).map(Math.floor);
+		// const max = new Vector(bottomRight.x, bottomRight.y).downScale(this.scale).map(Math.floor);
+
+		// const nextVisible = this.range(min, max).filter(s =>
+		// 	s.physics.length + s.scenery.length + s.powerups.length
+		// );
+
+		// if (this.visible.length === nextVisible.length && this.visible.every((s, i) => s === nextVisible[i])) return;
+
+		// this.visible.splice(0, this.visible.length, ...nextVisible);
+	}
+
+	config() {
+		this.resize();
+	}
+
 	addItem(item) {
-		let from = item.a || item.start || item.position;
-		let to = item.b || item.end || a;
+		const from = item.a || item.start || item.position
+			, to = item.b || item.end || from;
 		for (const sector of this.findTouchingSectors(from, to)) {
 			sector.add(item);
 			sector.rendered = false;
 		}
 
+		this.updateVisible();
 		return item;
-	}
-
-	cache() {
-		for (const row of this.rows.values()) {
-			for (const sector of row.values()) {
-				sector.rendered = false;
-			}
-		}
 	}
 
 	coords(vector) {
@@ -85,7 +61,7 @@ export default class {
 	}
 
 	delete(x, y) {
-		return this.rows.has(x) && this.rows.get(x).delete(y);
+		return this.columns.has(x) && this.columns.get(x).delete(y);
 	}
 
 	findTouchingSectors(from, to) {
@@ -97,9 +73,7 @@ export default class {
 		let b = this.coords(to);
 		for (let i = 0; i < 5e3; i++) {
 			let a = this.coords(initial);
-			if (a.x === b.x && a.y === b.y) {
-				break;
-			}
+			if (a.x === b.x && a.y === b.y) break;
 
 			let firstX = negativeX ? Math.round(Math.floor(initial.x / this.scale + 1) * this.scale) : Math.round(Math.ceil((initial.x + 1) / this.scale - 1) * this.scale) - 1;
 			let firstY = Math.round(from.y + (firstX - from.x) * factor);
@@ -120,14 +94,17 @@ export default class {
 			sectors.push(initial);
 		}
 
-		return sectors.map(vector => this.coords(vector)).map(vector => this.sector(vector.x, vector.y, true));
+		return sectors
+			.map(vector => this.coords(vector))
+			.map(vector => this.sector(vector.x, vector.y, true));
 	}
 
 	range(min, max) {
-		let sectors = [];
+		const sectors = [];
 		for (let x = Math.floor(min.x); x <= max.x; x++) {
 			for (let y = Math.floor(min.y); y <= max.y; y++) {
-				sectors.push(this.sector(x, y));
+				const sector = this.sector(x, y);
+				sector && sectors.push(sector);
 			}
 		}
 
@@ -135,41 +112,35 @@ export default class {
 	}
 
 	removeItem(item) {
-		let from = item.a || item.start || item.position;
-		let to = item.b || item.end || a;
-		for (const sector of this.findTouchingSectors(from, to)) {
+		const from = item.a || item.start || item.position
+			, to = item.b || item.end || from;
+		for (const sector of this.findTouchingSectors(from, to))
 			sector.remove(item);
-		}
 
 		return item;
 	}
 
 	resize() {
-		for (const row of this.rows.values()) {
-			for (const sector of row.values()) {
-				sector.resize();
-			}
-		}
+		const columns = Array.from(this.columns.values());
+		columns.forEach(column => {
+			const rows = Array.from(column.values());
+			rows.forEach(sector => sector.resize());
+		});
 	}
 
-	sector(x, y, add) {
-		if (!this.rows.has(x)) {
-			if (!add) {
-				return new Sector(this, null, null);
-			}
-
-			this.rows.set(x, new Map());
+	sector(x, y, add = false) {
+		let col = this.columns.get(x);
+		if (!col) {
+			if (!add) return null;
+			col = new Map();
+			this.columns.set(x, col);
 		}
 
-		const row = this.rows.get(x);
-		if (!row.has(y)) {
-			if (!add) {
-				return new Sector(this, null, null);
-			}
-
-			row.set(y, new Sector(this, x, y));
+		let sector = col.get(y);
+		if (!sector && add) {
+			sector = new Sector(this, x, y);
+			col.set(y, sector);
 		}
-
-		return row.get(y);
+		return sector ?? null;
 	}
 }

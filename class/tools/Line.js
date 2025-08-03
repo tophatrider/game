@@ -2,11 +2,14 @@ import CSSCursor from "../core/ui/CSSCursor.js";
 import Tool from "./Tool.js";
 
 export default class extends Tool {
-	static cursor = new CSSCursor('path', {
-		d: 'M10 0 L10 20 M0 10 L20 10',
-		size: 20,
-		strokeLineCap: 'round',
-		strokeWidth: 2
+	static cursor = new CSSCursor([
+		['path', {
+			d: 'M10 0V20M0 10H20',
+			strokeLineCap: 'round',
+			strokeWidth: 2
+		}]
+	], {
+		size: 20
 	});
 
 	anchors = new Map();
@@ -18,11 +21,11 @@ export default class extends Tool {
 		this.scene.addLine(anchor, pointer.position, this.scenery);
 		this.old = pointer.position.toStatic();
 		this.anchors.delete(event.pointerId);
-		this.anchors.size > 0 && (this.scene.cameraLock = true);
+		this.anchors.size > 0 && (this.scene.camera.locked = true);
 	}
 
 	draw(ctx) {
-		if (!this.scene.cameraLock || this.anchors.size < 1) return;
+		if (!this.scene.camera.locked || this.anchors.size < 1) return;
 		for (const pointer of this.mouse.pointers.filter(({ id }) => this.anchors.has(id))) {
 			const anchor = this.anchors.get(pointer.id)
 				, pos = pointer.position.toPixel();
@@ -38,19 +41,23 @@ export default class extends Tool {
 	}
 
 	update() {
-		if (!this.scene.cameraLock || this.anchors.size < 1) return;
+		if (!this.scene.camera.locked || this.anchors.size < 1) return;
 		const pos = this.mouse.position.toPixel()
 			, margin = 50
-			, dirX = (pos.x > this.scene.parent.canvas.width - margin) - (pos.x < margin);
+			, dirX = (pos.x > this.scene.game.canvas.width - margin) - (pos.x < margin);
 		if (dirX !== 0) {
-			this.scene.camera.x += 4 / this.scene.zoom * dirX;
-			this.mouse.position.x += 4 / this.scene.zoom * dirX;
+			const offset = 4 / this.scene.camera.zoom * dirX;
+			this.scene.camera.move(offset, 0);
+			this.mouse.position.x += offset;
+			this.mouse.primary && (this.mouse.primary.position.x += offset);
 		}
 
-		const dirY = (pos.y > this.scene.parent.canvas.height - margin) - (pos.y < margin);
+		const dirY = (pos.y > this.scene.game.canvas.height - margin) - (pos.y < margin);
 		if (dirY !== 0) {
-			this.scene.camera.y += 4 / this.scene.zoom * dirY;
-			this.mouse.position.y += 4 / this.scene.zoom * dirY;
+			const offset = 4 / this.scene.camera.zoom * dirY;
+			this.scene.camera.move(0, offset);
+			this.mouse.position.y += offset;
+			this.mouse.primary && (this.mouse.primary.position.y += offset);
 		}
 	}
 
@@ -61,6 +68,6 @@ export default class extends Tool {
 		// 	return;
 		// }
 
-		this.anchors.set(event.pointerId, pointer.initial.toCanvas(this.scene.parent.canvas));
+		this.anchors.set(event.pointerId, pointer.initial.toCanvas(this.scene.game.canvas));
 	}
 }

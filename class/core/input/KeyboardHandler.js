@@ -23,6 +23,7 @@ export default class KeyboardHandler extends StaticInput {
 	}
 
 	listen() {
+		'keyboard' in navigator && navigator.keyboard.lock(this.constructor.KeyLockKeymap);
 		super.listen(window, 'blur', this._handleBlur.bind(this));
 		super.listen(window, 'keydown', this._handleKeydown.bind(this));
 		super.listen(window, 'keyup', this._handleKeyup.bind(this));
@@ -31,7 +32,14 @@ export default class KeyboardHandler extends StaticInput {
 	}
 
 	dispose() {
+		'keyboard' in navigator && navigator.keyboard.unlock();
 		this.unlisten();
 		super.dispose();
 	}
+
+	static KeyLockKeymap = [
+		'ArrowUp', 'ArrowLeft', 'ArrowRight', 'ArrowDown',
+		'KeyW', 'KeyA', 'KeyS', 'KeyD',
+		'Space', 'Enter', 'Backspace'
+	];
 }

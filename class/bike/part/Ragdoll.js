@@ -59,8 +59,8 @@ export default class {
 
 		// ctx.save();
 		this.player.ghost && (ctx.globalAlpha /= 2,
-		this.player.scene.cameraFocus && this.player.scene.cameraFocus !== this.player.vehicle.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.player.vehicle.hitbox.pos.distanceTo(this.player.scene.cameraFocus.pos) / (this.player.vehicle.hitbox.size / 2) ** 2))));
-		ctx.lineWidth = 6 * this.player.scene.zoom;
+		this.player.scene.camera.controller.focalPoint && this.player.scene.camera.controller.focalPoint !== this.player.vehicle.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.player.vehicle.hitbox.pos.distanceTo(this.player.scene.camera.controller.target) / (this.player.vehicle.hitbox.size / 2) ** 2))));
+		ctx.lineWidth = 6 * this.player.scene.camera.zoom;
 
 		ctx.beginPath()
 		this.player.dead && (ctx.moveTo(sternum.x, sternum.y),
@@ -70,7 +70,7 @@ export default class {
 		ctx.lineTo(shadowKnee.x, shadowKnee.y)
 		ctx.lineTo(shadowFoot.x, shadowFoot.y)
 		ctx.save();
-		ctx.strokeStyle = /^dark$/i.test(this.player.scene.parent.settings.theme) ? '#fbfbfb80' : /^midnight$/i.test(this.player.scene.parent.settings.theme) ? '#cccccc80' : 'rgba(0,0,0,0.5)';
+		ctx.strokeStyle = this.player.scene.game.colorScheme.palette.track + '80';
 		ctx.stroke();
 		ctx.restore();
 
@@ -84,7 +84,7 @@ export default class {
 		ctx.lineTo(foot.x, foot.y)
 		ctx.stroke();
 
-		ctx.lineWidth = 8 * this.player.scene.zoom;
+		ctx.lineWidth = 8 * this.player.scene.camera.zoom;
 
 		ctx.beginPath()
 		ctx.moveTo(hip.x, hip.y)
@@ -92,9 +92,9 @@ export default class {
 		ctx.stroke();
 
 		ctx.beginPath()
-		ctx.lineWidth = 2 * this.player.scene.zoom;
-		// this.head.size * (this.player.scene.zoom / 2.8)
-		ctx.arc(head.x, head.y, 5 * this.player.scene.zoom, 0, 2 * Math.PI),
+		ctx.lineWidth = 2 * this.player.scene.camera.zoom;
+		// this.head.size * (this.player.scene.camera.zoom / 2.8)
+		ctx.arc(head.x, head.y, 5 * this.player.scene.camera.zoom, 0, 2 * Math.PI),
 		ctx.stroke()
 
 		ctx.globalAlpha = 1;

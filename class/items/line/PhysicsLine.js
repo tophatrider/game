@@ -1,4 +1,4 @@
-import Vector from "../../core/math/Vector.js";
+import Vector from "../../core/geometry/Vector.js";
 import Line from "./Line.js";
 
 export default class extends Line {

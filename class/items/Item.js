@@ -1,16 +1,16 @@
-import Vector from "../core/math/Vector.js";
+import Vector from "../core/geometry/Vector.js";
 
 export default class {
 	scene = null;
 	size = 7;
 	constructor(scene, x, y) {
-		this.scene = scene;
+		Object.defineProperty(this, 'scene', { value: scene, writable: true });
 		this.position = new Vector(x, y);
 	}
 
 	draw(ctx, position = this.position.toPixel()) {
 		ctx.beginPath();
-		ctx.arc(position.x, position.y, 7 * this.scene.zoom, 0, 2 * Math.PI);
+		ctx.arc(position.x, position.y, 7 * this.scene.camera.zoom, 0, 2 * Math.PI);
 		ctx.save();
 		ctx.fillStyle = this.constructor.color;
 		ctx.fill();
@@ -42,7 +42,7 @@ export default class {
 		return;
 		// let position = this.mouse.position.toPixel();
 		ctx.beginPath();
-		ctx.arc(position.x, position.y, 7 * this.scene.zoom, 0, 2 * Math.PI);
+		ctx.arc(position.x, position.y, 7 * this.scene.camera.zoom, 0, 2 * Math.PI);
 		ctx.save();
 		ctx.fillStyle = this.constructor.color;
 		ctx.fill();

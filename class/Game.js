@@ -1,13 +1,11 @@
-import RecursiveProxy from "./core/utils/RecursiveProxy.js";
 import EventRelay from "./core/EventRelay.js";
 import Events from "./core/Events.js";
+import ColorScheme from "./core/services/ColorScheme.js";
+import ConfigStorage from "./core/storage/ConfigStorage.js";
 import PointerHandler from "./core/input/PointerHandler.js";
-import Vector from "./core/math/Vector.js";
+import Vector from "./core/geometry/Vector.js";
 import Scene from "./scenes/Scene.js";
-import TrackStorage from "./TrackStorage.js";
-import { DEFAULTS } from "./core/constants.js";
-
-const defaultsFilter = (key, value) => (typeof value == 'object' || DEFAULTS.hasOwnProperty(key)) ? value : void 0;
+import FileSystemStorage from "./core/storage/FileSystemStorage.js";
 
 export default class Game extends EventRelay {
 	static Events = Events;
@@ -25,30 +23,17 @@ export default class Game extends EventRelay {
 	interpolation = true;
 	stats = { fps: 0, ups: 0 };
 
-	accentColor = '#000000'; // for themes
-	mouse = new PointerHandler();
+	colorScheme = new ColorScheme;
+	fileSystemStorage = new FileSystemStorage;
+	mouse = new PointerHandler;
 	scene = new Scene(this);
-	settings = new RecursiveProxy(Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('bhr-settings'), defaultsFilter)), {
-		set: (...args) => {
-			Reflect.set(...args);
-			localStorage.setItem('bhr-settings', JSON.stringify(this.settings, defaultsFilter));
-			this._handleSettingsChange(this.settings);
-			return true;
-		},
-		deleteProperty() {
-			Reflect.deleteProperty(...arguments);
-			localStorage.setItem('bhr-settings', JSON.stringify(this, defaultsFilter));
-			return true;
-		}
-	});
-	trackStorage = new TrackStorage();
+	settings = new ConfigStorage(this._handleSettingsChange.bind(this));
 	constructor(canvas) {
 		super();
 
 		Object.defineProperties(this, {
 			_frameInterval: { value: 1e3 / this.config.maxFrameRate, writable: true },
 			_progress: { value: 0, writable: true },
-			_resizeObserver: { value: new ResizeObserver(this.setCanvasSize.bind(this)), writable: true },
 			_updateInterval: { value: 1e3 / this.config.tickRate, writable: true },
 			_wasPaused: { value: null, writable: true }
 		});
@@ -60,15 +45,16 @@ export default class Game extends EventRelay {
 		this.mouse.on('up', this._handlePointerUp.bind(this));
 		this.mouse.on('wheel', this._handleScroll.bind(this));
 
-		// this._handleSettingsChange(this.settings);
-		// this.trackStorage.on('open', async () => {
+		this.colorScheme.on('paletteChange', this._handleColorPaletteChange.bind(this));
+		this._handleSettingsChange(this.settings);
+		// this.fileSystemStorage.on('open', async () => {
 		// 	if (!this.settings.autoSave) return;
-		// 	await this.trackStorage.open('savedState', { cache: true });
+		// 	await this.fileSystemStorage.open('savedState', { cache: true });
 		// 	if (this.settings.autoSaveInterval > 0) {
 		// 		const date = new Intl.DateTimeFormat(navigator.language, { dateStyle: 'short', timeStyle: 'medium' }).format().replace(/[/\\?%*:|"<>]/g, '-').replace(/,+\s*/, '_').replace(/\s+.*$/, '');
-		// 		this.trackStorage.open(date, { overwrite: false });
+		// 		this.fileSystemStorage.open(date, { overwrite: false });
 		// 		setInterval(() => {
-		// 			this.trackStorage.write(date, this.scene.toString(), { saveAndReplace: true });
+		// 			this.fileSystemStorage.write(date, this.scene.toString(), { saveAndReplace: true });
 		// 		}, this.settings.autoSaveInterval * 1e3);
 		// 	}
 
@@ -99,11 +85,16 @@ export default class Game extends EventRelay {
 		this.listen();
 	}
 
+	_handleColorPaletteChange(palette) {
+		this.ctx.fillStyle = palette.background;
+		this.ctx.strokeStyle = palette.track;
+		this.scene.sectors.config();
+	}
+
 	async _handleKeydown(event) {
 		switch (event.key.toLowerCase()) {
 		case 'arrowleft': {
-			event.preventDefault();
-			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
+			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.camera.controller.focalPoint);
 			if (focusedPlayerGhost) {
 				this.scene.paused = true;
 				focusedPlayerGhost.playbackTicks = Math.max(0, focusedPlayerGhost.playbackTicks - 5);
@@ -113,8 +104,7 @@ export default class Game extends EventRelay {
 		}
 
 		case 'arrowright': {
-			event.preventDefault();
-			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.cameraFocus);
+			const focusedPlayerGhost = this.scene.ghosts.find(playerGhost => playerGhost.vehicle.hitbox == this.scene.camera.controller.focalPoint);
 			if (focusedPlayerGhost) {
 				this.scene.paused = true;
 				focusedPlayerGhost.ghostIterator.next(focusedPlayerGhost.playbackTicks + 5);
@@ -123,7 +113,6 @@ export default class Game extends EventRelay {
 		}
 
 		case 'backspace':
-			event.preventDefault();
 			if (event.shiftKey) {
 				this.scene.restoreCheckpoint();
 				break;
@@ -140,16 +129,29 @@ export default class Game extends EventRelay {
 
 			this.scene.returnToCheckpoint();
 			break;
+		case 'r':
+			if (event.ctrlKey) {
+				if (event.shiftKey) {
+					this.mediaRecorder.stop();
+				}
+
+				this.createRecorder();
+				this.mediaRecorder.start();
+				if ('recorder' in window) {
+					recorder.style.removeProperty('display');
+				}
+			}
+			break;
 		case 'tab': {
 			event.preventDefault();
 			let playersToFocus = Array(...this.scene.players, ...this.scene.ghosts).map(player => player.vehicle.hitbox);
-			let index = playersToFocus.indexOf(this.scene.cameraFocus) + 1;
+			let index = playersToFocus.indexOf(this.scene.camera.controller.focalPoint) + 1;
 			if (playersToFocus.length <= index) {
 				index = 0;
 			}
 
 			// if player is a ghost, show time-progress bar on the bottom
-			this.scene.cameraFocus = playersToFocus[index];
+			this.scene.camera.controller.setFocalPoint(playersToFocus[index]);
 			this.scene.paused = false;
 			this.scene.frozen = false;
 
@@ -158,13 +160,13 @@ export default class Game extends EventRelay {
 		}
 
 		case '-':
-			event.preventDefault();
-			this.scene.zoomOut();
+			event.ctrlKey && event.preventDefault();
+			this.scene.camera.zoom -= .2;
 			break;
 		case '+':
 		case '=':
-			event.preventDefault();
-			this.scene.zoomIn();
+			event.ctrlKey && event.preventDefault();
+			this.scene.camera.zoom += .2;
 			break;
 		case 'p':
 		case ' ':
@@ -187,39 +189,15 @@ export default class Game extends EventRelay {
 		}
 
 		case 'control':
-			event.preventDefault();
 			this.scene.toolHandler.ctrlKey = true;
 			break;
 		case 'delete':
-			event.preventDefault();
 			if (this.scene.toolHandler.selected != 'select') break;
 			this.scene.toolHandler.currentTool.deleteSelected();
 			break;
 		case 'shift':
-			event.preventDefault();
 			this.scene.toolHandler.shiftKey = true;
 			break;
-		case 'v': {
-			// if (!event.ctrlKey) break;
-
-			// const queryOpts = { name: 'clipboard-read', allowWithoutGesture: false };
-			// const permissionStatus = await navigator.permissions.query(queryOpts).then(permissionStatus => {
-			// 	permissionStatus.onchange = ({ target }) => {
-			// 		target.state == 'granted' && navigator.clipboard.readText().then(console.log);
-			// 	};
-
-			// 	return permissionStatus.state;
-			// });
-
-			// if (permissionStatus == 'deined') {
-			// 	alert('NotAllowedError: Read permission denied.');
-			// 	break;
-			// }
-
-			// navigator.clipboard.readText().then(console.log).catch(alert);
-			break;
-		}
-
 		// store arrays of hotkeys in each tool, then compare
 		// let tools = Object.fromEntries(this.scene.toolHandler.cache.entries());
 		// for (const key in tools) {
@@ -231,29 +209,12 @@ export default class Game extends EventRelay {
 		// }
 		// break;
 		case 'a':
-			event.preventDefault();
 			this.scene.toolHandler.setTool('brush', false);
 			break;
 		case 'o':
-			event.preventDefault();
 			event.ctrlKey && this.openFile({ multiple: event.shiftKey });
 			break;
-		case 'r':
-			event.preventDefault();
-			if (event.ctrlKey) {
-				if (event.shiftKey) {
-					this.mediaRecorder.stop();
-				}
-
-				this.createRecorder();
-				this.mediaRecorder.start();
-				if ('recorder' in window) {
-					recorder.style.removeProperty('display');
-				}
-			}
-			break;
 		case 's':
-			event.preventDefault();
 			if (event.ctrlKey) {
 				if (event.shiftKey) {
 					this.saveAs();
@@ -267,24 +228,18 @@ export default class Game extends EventRelay {
 			this.scene.toolHandler.setTool('brush', true);
 			break;
 		case 'q':
-			event.preventDefault();
-			this.scene.toolHandler.setTool('line', false);
-			break;
-		case 'w':
-			event.preventDefault();
-			this.scene.toolHandler.setTool('line', true);
+			this.scene.toolHandler.setTool('line', event.shiftKey);
 			break;
 		case 'e':
-			event.preventDefault();
 			this.scene.toolHandler.setTool('eraser');
 			break;
 		case 'r':
-			event.preventDefault();
 			this.scene.toolHandler.setTool(this.scene.toolHandler.selected != 'camera' ? 'camera' : this.scene.toolHandler.old);
 			break;
 		case 'z':
+			if (!event.ctrlKey) break;
 			event.preventDefault();
-			event.ctrlKey && this.scene.history[(event.shiftKey ? 're' : 'un') + 'do']();
+			this.scene.history[(event.shiftKey ? 're' : 'un') + 'do']();
 		}
 	}
 
@@ -298,7 +253,7 @@ export default class Game extends EventRelay {
 		case 'f':
 		case 'f11':
 			event.preventDefault();
-			document.fullscreenElement ? document.exitFullscreen() : this.container.requestFullscreen();
+			this.toggleFullscreen();
 		}
 
 		if (!this.scene.editMode) return;
@@ -307,8 +262,7 @@ export default class Game extends EventRelay {
 			this.scene.toolHandler.ctrlKey = false;
 			break;
 		case 'g':
-			event.preventDefault();
-			this.gui.querySelector('.grid > input').checked = (this.scene.grid.size = 11 - this.scene.grid.size) > 1;
+			this.gui.querySelector('.grid > input').checked = (this.scene.sectors.size = 11 - this.scene.sectors.size) > 1;
 			break;
 		case 'shift':
 			this.scene.toolHandler.shiftKey = false;
@@ -317,8 +271,8 @@ export default class Game extends EventRelay {
 
 	_handlePointerDown(event) {
 		if (this.scene.processing) return;
-		this.scene.cameraLock = !event.shiftKey;
-		this.scene.cameraFocus = false;
+		this.scene.camera.locked = !event.shiftKey;
+		this.scene.camera.controller.focalPoint = null;
 		if (event.shiftKey) return;
 		else if (event.ctrlKey) {
 			this.scene.toolHandler.selected != 'select' && this.scene.toolHandler.setTool('select');
@@ -327,8 +281,8 @@ export default class Game extends EventRelay {
 		}
 
 		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
-			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
-			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
+			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.sectors.size) * this.scene.sectors.size;
+			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.sectors.size) * this.scene.sectors.size;
 		}
 
 		this.scene.toolHandler.press(...arguments);
@@ -336,15 +290,15 @@ export default class Game extends EventRelay {
 
 	_handlePointerMove(event) {
 		if (this.scene.processing) return;
-		this.scene.toolHandler.selected != 'camera' && (this.scene.cameraFocus = false);
+		this.scene.toolHandler.selected != 'camera' && (this.scene.camera.controller.focalPoint = null);
 		if (event.shiftKey && this.mouse.down) {
 			this.scene.toolHandler.cache.get('camera').stroke(...arguments);
 			return;
 		}
 
 		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
-			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
-			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
+			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.sectors.size) * this.scene.sectors.size;
+			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.sectors.size) * this.scene.sectors.size;
 		}
 
 		this.scene.toolHandler.stroke(...arguments);
@@ -352,23 +306,29 @@ export default class Game extends EventRelay {
 
 	_handlePointerUp(event) {
 		if (this.scene.processing) return;
-		this.scene.cameraLock = false;
+		this.scene.camera.locked = false;
 		if (!/^(camera|eraser|select)$/i.test(this.scene.toolHandler.selected)) {
-			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.grid.size) * this.scene.grid.size;
-			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.grid.size) * this.scene.grid.size;
+			this.mouse.position.x = Math.round(this.mouse.position.x / this.scene.sectors.size) * this.scene.sectors.size;
+			this.mouse.position.y = Math.round(this.mouse.position.y / this.scene.sectors.size) * this.scene.sectors.size;
 		}
 
 		event.shiftKey || this.scene.toolHandler.clip(...arguments);
 	}
 
-	_handleSettingsChange() {
+	_handleSettingsChange(settings) {
 		for (const setting in settings) {
-			const value = settings[setting];
+			let value = settings[setting];
 			switch (setting) {
+			case 'brightness':
+				this.canvas.style[(value === 100 ? 'remove' : 'set') + 'Property']('backdrop-filter', 'brightness(' + value + '%)');
+				this.canvas.style[(value === 100 ? 'remove' : 'set') + 'Property']('filter', 'brightness(' + value + '%)');
+				break;
+			case 'restorePreviousSession':
+				// restore session..
+				value && console.warn('Failed to restore session.');
+				break;
 			case 'theme':
-				this.ctx.fillStyle = '#'.padEnd(7, value == 'dark' ? 'fb' : value == 'midnight' ? 'c' : '0');
-				this.ctx.strokeStyle = this.ctx.fillStyle;
-				this.scene.grid.sectors.forEach(sector => sector.resize());
+				this.colorScheme.set(value);
 			}
 		}
 
@@ -383,11 +343,13 @@ export default class Game extends EventRelay {
 		}
 
 		const y = new Vector(event.clientX - this.canvas.offsetLeft, event.clientY - this.canvas.offsetTop + window.pageYOffset).toCanvas(this.canvas);
-		this.scene.cameraFocus || this.scene.camera.add(this.mouse.position.diff(y));
+		if (!this.scene.camera.controller.focalPoint) {
+			const diff = this.mouse.position.diff(y);
+			this.scene.camera.move(diff.x, diff.y);
+		}
 	}
 
 	listen() {
-		this._resizeObserver.observe(this.canvas);
 		super.listen(document, 'fullscreenchange', () => navigator.keyboard.lock(['Escape']), { passive: true });
 		super.listen(document, 'keydown', this._handleKeydown.bind(this));
 		super.listen(document, 'keyup', this._handleKeyup.bind(this));
@@ -395,18 +357,17 @@ export default class Game extends EventRelay {
 		'navigation' in window && super.listen(navigation, 'navigate', this.destroy.bind(this), { passive: true });		
 		super.listen(window, 'load', () => window.dispatchEvent(new Event('online')));
 		super.listen(window, 'beforeunload', async event => {
+			if (!this.settings.autoSave || !this.fileSystemStorage.writables.has('savedState')) return;
 			event.preventDefault();
 			event.returnValue = false;
-
-			if (this.trackStorage.writables.has('savedState')) {
-				const writable = this.trackStorage.writables.get('savedState');
-				// const writer = await writable.getWriter();
-				// console.log(writable)
-				await writable.write(this.scene.toString());
-				await writable.close();
-			}
+			const writable = this.fileSystemStorage.writables.get('savedState');
+			// const writer = await writable.getWriter();
+			// console.log(writable)
+			await writable.write(this.scene.toString());
+			await writable.close();
+			return event.returnValue;
 		});
-		super.listen(window, 'unload', this.destroy.bind(this));
+		super.listen(window, 'pagehide', e => !e.persisted && this.destroy());
 		super.listen();
 		console.debug('[Game] Listeners bound');
 	}
@@ -471,6 +432,7 @@ export default class Game extends EventRelay {
 			this.scene.update(this._progress);
 			this.scene.lateUpdate(this._progress);
 			this.scene.render(this.ctx);
+			this.scene.renderHUD(this.ctx);
 			this.emit(Events.Draw, this.ctx);
 			this.#frames++;
 		}
@@ -488,12 +450,11 @@ export default class Game extends EventRelay {
 		}
 	}
 
-	createRecorder() {
-		const lastArgument = arguments[arguments.length - 1];
+	createRecorder(callback) {
 		this.mediaRecorder = new MediaRecorder(this.canvas.captureStream(50));
 		this.mediaRecorder.addEventListener('dataavailable', ({ data }) => {
 			const objectURL = URL.createObjectURL(data);
-			typeof lastArgument == 'function' && lastArgument(objectURL);
+			typeof callback == 'function' && callback(objectURL);
 			this.emit(Events.RecorderStop, objectURL);
 		});
 		this.mediaRecorder.addEventListener('start', event => {
@@ -502,27 +463,54 @@ export default class Game extends EventRelay {
 		return this.mediaRecorder;
 	}
 
+	toggleFullscreen() {
+		document.fullscreenElement ? document.exitFullscreen() : this.container.requestFullscreen();
+	}
+
+	async togglePictureInPicture(options) {
+		if (document.pictureInPictureElement) {
+			await this.pip.pause();
+			await document.exitPictureInPicture();
+			return;
+		}
+
+		const stream = this.canvas.captureStream(60);
+		if (!this.pip) {
+			const video = document.createElement('video');
+			Object.defineProperty(this, 'pip', { value: video, writable: true });
+			video.srcObject = stream;
+			video.muted = true;
+			video.playsInline = true;
+		}
+
+		await this.pip.play();
+		return this.pip.requestPictureInPicture(options);
+	}
+
 	setCanvas(canvas) {
 		this.canvas = canvas;
 		// const offscreen = this.canvas.transferControlToOffscreen();
 		// this.scene.helper.postMessage({ canvas: offscreen }, [offscreen]);
-		this.ctx = this.canvas.getContext('2d');
-		this.container = canvas.parentElement;
-		this.gui = this.container.shadowRoot || this.container.attachShadow({ mode: 'open' });
-		this.setCanvasSize();
+		this.ctx = this.canvas.getContext('2d', {
+			alpha: false,
+			desynchronized: true
+		});
+		// this.container = canvas.parentElement;
+		// this.gui = this.container.shadowRoot || this.container.attachShadow({ mode: 'open' });
+		this.configCanvas();
 		this.mouse.setTarget(canvas);
 	}
 
 	// create a separate overlaying canvas for scenery lines with a transparent background
-	setCanvasSize() {
-		const computedStyle = getComputedStyle(this.canvas);
-		this.canvas.setAttribute('height', parseFloat(computedStyle.height) * window.devicePixelRatio);
-		this.canvas.setAttribute('width', parseFloat(computedStyle.width) * window.devicePixelRatio);
-		this.ctx.fillStyle = '#'.padEnd(7, this.settings.theme == 'dark' ? 'fb' : this.settings.theme == 'midnight' ? 'c' : '0');
-		this.ctx.lineWidth = Math.max(2 * this.scene.zoom, 0.5);
+	configCanvas() {
+		this.scene.camera.setViewport(this.canvas.width, this.canvas.height);
+		this.scene.sectors.updateVisible();
+		// this.scene.camera.applyTransform(this.ctx);
+		this.ctx.fillStyle = this.colorScheme.palette.background;
+		this.ctx.lineWidth = Math.max(2 * this.scene.camera.zoom, .5);
 		this.ctx.lineCap = 'round';
 		this.ctx.lineJoin = 'round';
-		this.ctx.strokeStyle = this.ctx.fillStyle;
+		this.ctx.strokeStyle = this.colorScheme.palette.track; // accent?
 		// this.ctx.font = '20px Arial';
 		// this.ctx.textAlign = 'center';
 		this.ctx.textBaseline = 'middle';
@@ -531,15 +519,19 @@ export default class Game extends EventRelay {
 		this.ctx.mozImageSmoothingEnabled = !1,
 		this.ctx.oImageSmoothingEnabled = !1,
 		this.ctx.webkitImageSmoothingEnabled = !1;
-		// this.ctx.scale(-1, 1); // for 'left-hand' mode
+	}
+
+	setContainer(container) {
+		this.container = container;
+		this.gui = this.container.shadowRoot || this.container.attachShadow({ mode: 'open' });
 	}
 
 	async showRecentFiles() {
-		if ('loadrecenttracks' in window && this.trackStorage.readyState === 1) {
+		if ('loadrecenttracks' in window && this.fileSystemStorage.readyState === 1) {
 			loadrecenttracks.showModal();
 			if ('recenttracks' in window) {
 				const results = [];
-				for (const [fileName, fileHandle] of this.trackStorage.cache) {
+				for (const [fileName, fileHandle] of this.fileSystemStorage.cache) {
 					const fileData = await fileHandle.getFile();
 					const wrapper = document.createElement('div');
 					wrapper.style = 'display: flex;gap: 0.25rem;width: -webkit-fill-available;';
@@ -551,8 +543,8 @@ export default class Game extends EventRelay {
 					button.style = 'width: -webkit-fill-available;';
 					const remove = wrapper.appendChild(document.createElement('button'));
 					remove.addEventListener('click', async event => {
-						this.trackStorage.cache.delete(fileHandle.name);
-						this.trackStorage.writables.delete(fileHandle.name);
+						this.fileSystemStorage.cache.delete(fileHandle.name);
+						this.fileSystemStorage.writables.delete(fileHandle.name);
 						fileHandle.remove();
 						wrapper.remove();
 					});
@@ -670,15 +662,20 @@ export default class Game extends EventRelay {
 		this.init({ default: true, write: true });
 	}
 
-	destroy(event) {
+	destroy() {
 		cancelAnimationFrame(this.#lastFrame);
 		super.destroy();
-		this.mouse.close();
-		this.scene.destroy();
-		this.unlisten();
-		this._resizeObserver.disconnect();
-		this._resizeObserver = null;
+		this.mouse.dispose();
+		this.mouse = null;
 		this.canvas = null;
+		this.ctx = null;
+		this.container = null;
+		this.gui = null;
+		this.scene.destroy();
+		this.scene = null;
+		this.settings = null;
+		this.fileSystemStorage.destroy();
+		this.fileSystemStorage = null;
 	}
 
 	static serveToast(toast, timeout) {

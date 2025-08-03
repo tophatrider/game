@@ -5,10 +5,7 @@ export default class Target extends Collectable {
 	static color = '#ff0'
 	activate(part) {
 		super.activate(part);
-		if (part.parent.player.ghost) {
-			return;
-		}
-
+		if (part.parent.player.ghost) return;
 		part.parent.player.pendingConsumables |= 2;
 	}
 }

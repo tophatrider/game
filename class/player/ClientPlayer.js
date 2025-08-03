@@ -1,23 +1,23 @@
-import DeviceOrientationHandler from "../core/input/DeviceOrientationHandler.js";
+// import DeviceOrientationHandler from "../core/input/DeviceOrientationHandler.js";
 import KeyboardHandler from "../core/input/KeyboardHandler.js";
 import BasePlayer from "./BasePlayer.js";
 
 export default class Player extends BasePlayer {
 	gamepad = new KeyboardHandler;
 	ghost = false;
-	virtualGamepad = new DeviceOrientationHandler;
+	// virtualGamepad = new DeviceOrientationHandler;
 	constructor() {
 		super(...arguments);
 		this.gamepad.listen();
 		this.gamepad.on('down', this.updateRecords.bind(this));
 		this.gamepad.on('up', this.updateRecords.bind(this));
-		this.virtualGamepad.listen();
+		// this.virtualGamepad.listen();
 	}
 
 	updateRecords(keys) {
 		if (!keys || keys.size === 0 || this.dead || this.scene.processing || this.scene.ghostInFocus) return;
-		this.scene.cameraFocus = this.vehicle.hitbox;
-		this.scene.parent.settings.autoPause && (this.scene.frozen = false);
+		this.scene.camera.controller.setFocalPoint(this.vehicle.hitbox);
+		this.scene.game.settings.autoPause && (this.scene.frozen = false);
 		typeof keys == 'string' && (keys = new Set([keys]));
 		let t = this.scene.currentTime;
 		keys.has('left') && !this.records[0].delete(t) && this.records[0].add(t);
@@ -32,7 +32,7 @@ export default class Player extends BasePlayer {
 
 	checkComplete() {
 		if (this.targetsCollected === this.scene.targets && this.scene.currentTime > 0 && !this.scene.editMode) {
-			this.scene.parent.emit('trackComplete', {
+			this.scene.game.emit('trackComplete', {
 				code: `${this.scene.firstPlayer.records.map(record => Array.from(record).join(' ')).join(',')},${this.scene.currentTime},${this.vehicle.name}`,
 				id: this.scene.id ?? location.pathname.split('/')[2],
 				time: this.scene.currentTime,
@@ -67,6 +67,6 @@ export default class Player extends BasePlayer {
 	}
 
 	destroy() {
-		this.gamepad.unlisten();
+		this.gamepad.destroy();
 	}
 }

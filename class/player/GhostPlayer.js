@@ -55,11 +55,11 @@ export default class GhostPlayer extends BasePlayer {
 	// #ticks = 0;
 	// set currentTime(value) {
 	// 	if (this.ghost) {
-	// 		this.records[0].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('left');
-	// 		this.records[1].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('right');
-	// 		this.records[2].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('up');
-	// 		this.records[3].has(this.#ticks * this.scene.parent.max) && this.gamepad._toggle('down');
-	// 		this.records[4].has(this.#ticks * this.scene.parent.max) && this.vehicle.swap();
+	// 		this.records[0].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('left');
+	// 		this.records[1].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('right');
+	// 		this.records[2].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('up');
+	// 		this.records[3].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('down');
+	// 		this.records[4].has(this.#ticks * this.scene.game.max) && this.vehicle.swap();
 	// 	}
 
 	// 	this.fixedUpdate();
@@ -81,8 +81,8 @@ export default class GhostPlayer extends BasePlayer {
 						this.playbackTicks = value;
 					}
 
-					this.scene.cameraFocus = this.vehicle.hitbox;
-					this.scene.camera.set(this.scene.cameraFocus.pos);
+					this.scene.camera.controller.setFocalPoint(this.vehicle.hitbox);
+					this.scene.camera.controller.snapToTarget();
 					nextTick = value;
 					continue;
 				} else {
@@ -90,11 +90,11 @@ export default class GhostPlayer extends BasePlayer {
 				}
 			}
 
-			this.records[0].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('left');
-			this.records[1].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('right');
-			this.records[2].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('up');
-			this.records[3].has(this.playbackTicks * this.scene.parent.max) && this.gamepad._toggle('down');
-			this.records[4].has(this.playbackTicks * this.scene.parent.max) && this.vehicle.swap();
+			this.records[0].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('left');
+			this.records[1].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('right');
+			this.records[2].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('up');
+			this.records[3].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('down');
+			this.records[4].has(this.playbackTicks * this.scene.game._updateInterval) && this.vehicle.swap();
 
 			this.fixedUpdate();
 			this.playbackTicks++;
