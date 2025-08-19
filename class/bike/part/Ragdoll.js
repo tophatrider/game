@@ -31,35 +31,36 @@ export default class {
 		Object.defineProperty(this, 'player', { value: parent, writable: true });
 		for (const point of this.points) {
 			point.size = 3;
-			point.friction = 0.05;
+			point.friction = .05;
 		}
 
-		this.head.size = this.hip.size = 8;
+		this.head.size = 5;
+		this.hip.size = 6;
+		// this.reset();
 		for (const joint of this.joints) {
-			joint.springConstant = 0.4;
-			joint.dampConstant = 0.7;
+			joint.springConstant = .4;
+			joint.dampConstant = .7;
 		}
 
 		this.setPosition(stickman);
 	}
 
 	draw(ctx) {
-		const head = this.head.pos.toPixel()
-		// 	, sternum = this.sternum.pos.toPixel()
-			, elbow = this.elbow.pos.toPixel()
-			, hand = this.hand.pos.toPixel()
-			, shadowElbow = this.shadowElbow.pos.toPixel()
-			, shadowHand = this.shadowHand.pos.toPixel()
-			, knee = this.knee.pos.toPixel()
-			, foot = this.foot.pos.toPixel()
-			, shadowKnee = this.shadowKnee.pos.toPixel()
-			, shadowFoot = this.shadowFoot.pos.toPixel()
-			, hip = this.hip.pos.toPixel()
-			, sternum = head.diff(hand.diff(hip).scale(0.08)).diff(head.diff(hip).scale(0.2));
+		const camera = this.player.scene.camera
+			, head = camera.toScreen(this.head.pos)
+			, elbow = camera.toScreen(this.elbow.pos)
+			, hand = camera.toScreen(this.hand.pos)
+			, shadowElbow = camera.toScreen(this.shadowElbow.pos)
+			, shadowHand = camera.toScreen(this.shadowHand.pos)
+			, knee = camera.toScreen(this.knee.pos)
+			, foot = camera.toScreen(this.foot.pos)
+			, shadowKnee = camera.toScreen(this.shadowKnee.pos)
+			, shadowFoot = camera.toScreen(this.shadowFoot.pos)
+			, hip = camera.toScreen(this.hip.pos)
+			, sternum = head.clone().sub(hand.clone().sub(hip).scale(.08)).sub(head.clone().sub(hip).scale(.2));
 
-		// ctx.save();
 		this.player.ghost && (ctx.globalAlpha /= 2,
-		this.player.scene.camera.controller.focalPoint && this.player.scene.camera.controller.focalPoint !== this.player.vehicle.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.player.vehicle.hitbox.pos.distanceTo(this.player.scene.camera.controller.target) / (this.player.vehicle.hitbox.size / 2) ** 2))));
+		this.player.scene.camera.controller.focalPoint && this.player.scene.camera.controller.focalPoint !== this.player.hitbox && (ctx.globalAlpha *= Math.min(1, Math.max(0.5, this.player.hitbox.pos.distanceTo(this.player.scene.camera.controller.target) / (this.player.hitbox.size / 2) ** 2))));
 		ctx.lineWidth = 6 * this.player.scene.camera.zoom;
 
 		ctx.beginPath()
@@ -75,7 +76,6 @@ export default class {
 		ctx.restore();
 
 		ctx.beginPath()
-		// ctx.moveTo(head.x, head.y)
 		ctx.moveTo(sternum.x, sternum.y)
 		ctx.lineTo(elbow.x, elbow.y)
 		ctx.lineTo(hand.x, hand.y)
@@ -93,12 +93,10 @@ export default class {
 
 		ctx.beginPath()
 		ctx.lineWidth = 2 * this.player.scene.camera.zoom;
-		// this.head.size * (this.player.scene.camera.zoom / 2.8)
-		ctx.arc(head.x, head.y, 5 * this.player.scene.camera.zoom, 0, 2 * Math.PI),
+		ctx.arc(head.x, head.y, this.head.size * this.player.scene.camera.zoom, 0, 2 * Math.PI),
 		ctx.stroke()
 
 		ctx.globalAlpha = 1;
-		// ctx.restore();
 	}
 
 	fixedUpdate() {
@@ -116,18 +114,16 @@ export default class {
 	setPosition(stickman) {
 		for (const part in stickman) {
 			if (part in this) {
-				this[part].real.set(stickman[part]);
-				this[part].pos.set(this[part].real);
+				this[part].setPosition(stickman[part]);
 			}
 		}
 	}
 
 	setVelocity(a, b) {
-		a.scaleSelf(0.5);
-		b.scaleSelf(0.5);
+		a.scale(.5);
+		b.scale(.5);
 		for (const joint of this.joints) {
-			let len = joint.length;
-			len > 20 && (len = 20);
+			const len = Math.min(20, joint.length);
 			joint.lrest = len;
 			joint.leff = len;
 		}
@@ -140,11 +136,11 @@ export default class {
 		let upper = [this.head, this.elbow, this.shadowElbow, this.hand, this.shadowHand];
 		let lower = [this.hip, this.knee, this.shadowKnee, this.foot, this.shadowFoot];
 		for (const point of upper)
-			point.old.set(point.real.diff(a));
+			point.old.set(point.real.clone().sub(a));
 		for (const point of lower)
-			point.old.set(point.real.diff(b));
+			point.old.set(point.real.clone().sub(b));
 		for (const point of this.points) {
-			point.velocity.set(point.real.diff(point.old));
+			point.velocity.set(point.real.clone().sub(point.old));
 			point.velocity.x += Math.random() - Math.random();
 			point.velocity.y += Math.random() - Math.random();
 		}
@@ -159,5 +155,21 @@ export default class {
 		}
 
 		return new this.constructor(this.player, stickman);
+	}
+
+	kill() {
+		this.head.drive = Mass.prototype.drive;
+		this.hip.drive = Mass.prototype.drive;
+	}
+
+	reset() {
+		const drive = this.player.crash.bind(this.player);
+		this.head.drive = drive;
+		this.hip.drive = drive;
+	}
+
+	*[Symbol.iterator]() {
+		for (const point of this.points)
+			yield point;
 	}
 }

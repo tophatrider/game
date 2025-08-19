@@ -69,7 +69,8 @@
 .toolbar .island.right { transform-origin: right }
 .toolbar .island.top { transform-origin: top }
 
-#game-container.pointer-down .toolbar .island { margin: /* clamp(-4px, -4%, -16px) */ -4% }
+#game-container[write][replaying] .toolbar>.left.middle,
+#game-container:is(.input, .playing, [playing]) .toolbar .island { margin: /* clamp(-4px, -4%, -16px) */ -4% }
 
 #toolbar.counter { counter-reset: index }
 #toolbar.counter > :not(:hover)::after {
@@ -287,7 +288,7 @@
 
 #game-container:not([write]) .toolbar>.left.middle>.toolbar-item:not([data-tool=camera], .change-vehicle),
 #game-container[write]:not([replaying]) .toolbar>.bottom.center, /* No need for pause controls while playing */
-#game-container:not([replaying]) :is(.toolbar>.bottom.center>.toolbar-item:not(.playpause), .pip),
+#game-container:not([replaying]) .pip,
 :has([data-options~=powerups]>input[name=tool]:not(:checked)) #powerups,
 #game-container:not(.fullscreen-enabled) .toolbar-item.fullscreen,
 :has([data-tool=eraser] > input[name=tool]:not(:checked)) #tool-options #eraser-options { display: none }

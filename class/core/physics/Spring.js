@@ -1,5 +1,3 @@
-import Vector from "../geometry/Vector.js";
-
 export default class Spring {
 	dampConstant = .5;
 	leff = 40;
@@ -11,7 +9,7 @@ export default class Spring {
 	}
 
 	get vector() {
-		return this.b.real.diff(this.a.real);
+		return this.b.real.clone().sub(this.a.real);
 	}
 
 	get length() {
@@ -23,22 +21,16 @@ export default class Spring {
 	}
 
 	rotate(a) {
-		let b = this.b.real.diff(this.a.real);
-		b = new Vector(-b.y / this.leff, b.x / this.leff);
-		this.a.real.add(b.scale(a));
+		let b = this.b.real.clone().sub(this.a.real);
+		b.set(-b.y / this.leff, b.x / this.leff);
+		this.a.real.add(b.clone().scale(a));
 		this.b.real.add(b.scale(-a));
 	}
 
 	swap() {
-		let a = this.a.pos.clone();
-		this.a.pos = this.b.pos.clone();
-		this.b.pos = a.clone();
-		a.set(this.a.real);
-		this.a.real.set(this.b.real);
-		this.b.real.set(a);
-		a.set(this.a.old);
-		this.a.old.set(this.b.old);
-		this.b.old.set(a);
+		let a = this.a.real.clone();
+		this.a.setPosition(this.b.real);
+		this.b.setPosition(a);
 		a.set(this.a.velocity);
 		this.a.velocity.set(this.b.velocity);
 		this.b.velocity.set(a);
@@ -48,13 +40,13 @@ export default class Spring {
 	}
 
 	fixedUpdate() {
-		let distance = this.b.real.diff(this.a.real);
+		let distance = this.b.real.clone().sub(this.a.real);
 		let length = distance.length;
 		if (length < 1) return;
-		distance = distance.scale(1 / length);
-		let force = distance.scale((length - this.leff) * this.springConstant);
-		force.add(distance.scale(this.b.velocity.diff(this.a.velocity).dot(distance) * this.dampConstant));
-		this.b.velocity.add(force.scale(-1));
+		distance.scale(1 / length);
+		let force = distance.clone().scale((length - this.leff) * this.springConstant);
+		force.add(distance.scale(this.b.velocity.clone().sub(this.a.velocity).dot(distance) * this.dampConstant));
+		this.b.velocity.add(force.clone().scale(-1));
 		this.a.velocity.add(force);
 	}
 }

@@ -4,6 +4,7 @@ export default {
 	Pause: 'gamePause',
 	PlayerComplete: 'trackComplete',
 	PlayerFocusChange: 'playerFocusChange',
+	PlayerFocusLost: 'playerFocusLost',
 	RecorderStart: 'recorderStart',
 	RecorderStop: 'recorderStop',
 	ReplayAdd: 'replayAdd',

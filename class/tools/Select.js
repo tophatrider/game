@@ -1,5 +1,5 @@
 import Tool from "./Tool.js";
-import Vector from "../core/geometry/Vector.js";
+import Vector from "../core/geometry/Vector2.js";
 
 export default class extends Tool {
 	anchor = null;
@@ -13,14 +13,26 @@ export default class extends Tool {
 		}
 	}
 
-	clip() {
+	onPress() {
+		this.anchor = this.mouse.raw.toStatic();
+	}
+
+	onStroke() {
+		if (!this.mouse.down || this.anchor.distanceTo(this.mouse.raw) < 4) return;
+
+		const { position } = this.mouse
+			, old = this.anchor;
+		this.points = [Math.min(position.x, old.x), Math.min(position.y, old.y), Math.abs(position.x - old.x), Math.abs(position.y - old.y)];
+	}
+
+	onClip() {
 		this.anchor = null;
 		for (const type in this.selected) {
 			typeof this.selected[type] == 'object' && this.selected[type].splice(0);
 		}
 
-		let min = new Vector(this.points[0], this.points[1]).toCanvas(this.scene.game.canvas);
-		let max = new Vector(this.points[0] + this.points[2], this.points[1] + this.points[3]).toCanvas(this.scene.game.canvas);
+		let min = this.scene.camera.toWorld(this.points[0], this.points[1]);
+		let max = this.scene.camera.toWorld(this.points[0] + this.points[2], this.points[1] + this.points[3]);
 		for (const sector of this.scene.sectors.range(min.map(value => Math.floor(value / this.scene.sectors.scale)), max.map(value => Math.floor(value / this.scene.sectors.scale))).filter(sector => sector.physics.length + sector.scenery.length > 0)) {
 			const types = sector.search(min, max);
 			for (const type in types) {
@@ -54,17 +66,5 @@ export default class extends Tool {
 		ctx.fill(),
 		ctx.stroke(),
 		ctx.restore();
-	}
-
-	press() {
-		this.anchor = this.mouse.position.toStatic();
-	}
-
-	stroke() {
-		if (!this.mouse.down || this.anchor.distanceTo(this.mouse.position) < 4) return;
-
-		const position = this.mouse.position.toPixel()
-			, old = this.anchor.toPixel();
-		this.points = [Math.min(position.x, old.x), Math.min(position.y, old.y), Math.abs(position.x - old.x), Math.abs(position.y - old.y)];
 	}
 }

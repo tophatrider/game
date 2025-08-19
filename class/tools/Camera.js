@@ -1,4 +1,4 @@
-import Vector from "../core/geometry/Vector.js";
+import Vector from "../core/geometry/Vector2.js";
 import CSSCursor from "../core/ui/CSSCursor.js";
 import Tool from "./Tool.js";
 
@@ -34,11 +34,11 @@ export default class extends Tool {
 		this.mouse._handleScroll(syntheticEvent);
 	}
 
-	trackOffset = new Vector();
-	press() {
+	trackOffset = new Vector;
+	onPress() {
 		if (this.mouse._pointers.size === 2) {
 			const [a, b] = this.mouse.pointers
-				, dist = a.position.distanceTo(b.position);
+				, dist = a.raw.distanceTo(b.raw);
 			this.#pinch = {
 				active: true,
 				pointerIds: [a.id, b.id],
@@ -48,28 +48,24 @@ export default class extends Tool {
 			};
 		}
 
-		this.trackOffset.set(new Vector());
+		this.trackOffset.set(0, 0);
 	}
 
-	scroll(event) {
-		this.scene.camera.zoom += event.wheelDelta > 0 ? .2 : -.2;
-	}
-
-	stroke(event) {
+	onStroke(event) {
 		if (this.#pinch.active) {
 			const [idA, idB] = this.#pinch.pointerIds;
 			const a = this.mouse.pointers.find(p => p.id === idA);
 			const b = this.mouse.pointers.find(p => p.id === idB);
 
 			if (a && b) {
-				const current = a.position.distanceTo(b.position);
+				const current = a.raw.distanceTo(b.raw);
 				const last = this.#pinch.lastDistance;
 				const scale = current / last;
 
 				this.#pinch.scale *= scale;
 				this.#pinch.lastDistance = current;
 
-				const center = a.position.clone().add(b.position).scale(0.5);
+				const center = a.raw.clone().add(b.raw).scale(0.5);
 
 				this._handlePinch({
 					type: "wheel",
@@ -89,13 +85,35 @@ export default class extends Tool {
 
 		if (!this.mouse.down) return;
 		this.scene.camera.move(-offset.x, -offset.y);
-		this.mouse.position.sub(offset);
+		this.mouse.raw.sub(offset);
 	}
 
-	clip() {
+	onClip() {
 		if (this.mouse._pointers.size < 2 && this.#pinch.active) {
 			this.#pinch.active = false;
 			this.#pinch.pointerIds.splice(0);
 		}
+	}
+
+	onScroll(event) {
+		const camera = this.scene.camera
+			, oldZoom = camera.zoom
+			// , delta = event.wheelDelta > 0 ? .2 : -.2
+			, delta = (event.wheelDelta > 0 ? 1 : -1) * camera.zoom * 0.1
+			, newZoom = oldZoom + delta;
+		if (newZoom === oldZoom || newZoom <= 0) return;
+		if (camera.controller.focalPoint) {
+			camera.zoom = newZoom;
+			return;
+		}
+
+		const mouseWorldBefore = camera.toWorld(event.offsetX, event.offsetY, true);
+		camera.zoom = newZoom;
+		const mouseWorldAfter = camera.toWorld(event.offsetX, event.offsetY, true);
+
+		const dx = mouseWorldBefore.x - mouseWorldAfter.x
+			, dy = mouseWorldBefore.y - mouseWorldAfter.y;
+
+		camera.move(dx, dy);
 	}
 }

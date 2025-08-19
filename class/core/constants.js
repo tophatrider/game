@@ -1,7 +1,5 @@
-import StaticVector from "./geometry/StaticVector.js";
-
-export const GRAVITY = new StaticVector(0, .3);
-export const DRAG = 0.99;
+export const GRAVITY = Object.freeze({ x: 0, y: .3 });
+export const DRAG = .99;
 
 export const KEYMAP = Object.freeze({
 	down: ['arrowdown', 's'],
@@ -11,33 +9,47 @@ export const KEYMAP = Object.freeze({
 	z: ['z']
 });
 
+// Used for mapped key input states using Uint8Array for memory optimizations
+// export const KEYMAP = Object.freeze([
+// 	['arrowdown', 's'],
+// 	['arrowleft', 'a'],
+// 	['arrowright', 'd'],
+// 	['arrowup', 'w'],
+// 	['z']
+// ]);
+
 export const DEFAULTS = Object.freeze({
 	autoPause: false,
 	autoSave: false,
 	autoSaveInterval: 5,
 	brightness: 100,
+	displayFPS: false,
 	restorePreviousSession: false,
-	theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+	theme: 'system'
 });
 
+import Color from "./utils/Color.js";
+
+// Create core/constants
+// Create core/constants/colors -- or palette -- or colorPalettes.js
 export const PALETTES = Object.freeze({
 	dark: Object.freeze({
-		accent: '#333333',
-		background: '#1b1b1b',
-		foreground: '#666666',
-		track: '#fbfbfb'
+		accent: new Color('#333'),
+		background: new Color('#1b1b1b'),
+		foreground: new Color('#666'),
+		track: new Color('#fbfbfb')
 	}),
 	light: Object.freeze({
-		accent: '#333333',
-		background: '#ffffff',
-		foreground: '#aaaaaa',
-		track: '#000000'
+		accent: new Color('#333'),
+		background: new Color('#fff'),
+		foreground: new Color('#aaa'),
+		track: new Color('#000')
 	}),
 	midnight: Object.freeze({
-		accent: '#2a323f',
-		background: '#252b31',
-		foreground: '#666666',
-		track: '#cccccc'
+		accent: new Color('#2a323f'),
+		background: new Color('#252b31'),
+		foreground: new Color('#666'),
+		track: new Color('#ccc')
 	})
 });
 

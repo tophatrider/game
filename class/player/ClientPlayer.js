@@ -4,10 +4,11 @@ import BasePlayer from "./BasePlayer.js";
 
 export default class Player extends BasePlayer {
 	gamepad = new KeyboardHandler;
-	ghost = false;
-	// virtualGamepad = new DeviceOrientationHandler;
+	records = Array.from({ length: 5 }, () => new Set());
+	// virtualGamepad = isTouchDevice() ? new DeviceOrientationHandler : null;
 	constructor() {
 		super(...arguments);
+		Object.defineProperty(this, 'ghost', { value: false });
 		this.gamepad.listen();
 		this.gamepad.on('down', this.updateRecords.bind(this));
 		this.gamepad.on('up', this.updateRecords.bind(this));
@@ -16,7 +17,7 @@ export default class Player extends BasePlayer {
 
 	updateRecords(keys) {
 		if (!keys || keys.size === 0 || this.dead || this.scene.processing || this.scene.ghostInFocus) return;
-		this.scene.camera.controller.setFocalPoint(this.vehicle.hitbox);
+		this.scene.camera.controller.setFocalPoint(this.hitbox);
 		this.scene.game.settings.autoPause && (this.scene.frozen = false);
 		typeof keys == 'string' && (keys = new Set([keys]));
 		let t = this.scene.currentTime;
@@ -41,10 +42,18 @@ export default class Player extends BasePlayer {
 		}
 	}
 
-	restore(snapshot) {
-		super.restore(...arguments);
+	serialize() {
+		return Object.assign(super.serialize(), {
+			records: this.records.map(record => new Set(record))
+		});
+	}
 
-		let changed = new Set();
+	restore(snapshot) {
+		this.scene.currentTime = snapshot.currentTime;
+		super.restore(...arguments);
+		this.records.splice(0, this.records.length, ...snapshot.records.map(r => new Set(r)));
+
+		const changed = new Set();
 		for (const key of snapshot.downKeys) {
 			if (!this.gamepad.downKeys.has(key)) {
 				changed.add(key);
@@ -61,7 +70,7 @@ export default class Player extends BasePlayer {
 	}
 
 	reset() {
-		this.records.forEach(set => set.clear());
+		this.records.forEach(s => s.clear());
 		this.updateRecords(this.gamepad.downKeys);
 		super.reset(...arguments);
 	}

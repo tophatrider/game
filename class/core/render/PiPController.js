@@ -1,8 +1,8 @@
 export default class PiPController {
+	pipVideo = null;
 	constructor(canvas, fps = 60) {
 		this.canvas = canvas;
 		this.fps = fps;
-		this.pipVideo = null;
 	}
 
 	async enter(options) {

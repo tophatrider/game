@@ -6,70 +6,83 @@ addEventListener('message', async ({ data }) => {
 		const match = data.code.match(/(?:[-\d\s,a-v]*#){2}[-\d\s,a-w]*(?:#(?:BMX|MTB))?(?:#\d+)?/i);
 		if (match === null) break;
 		const code = match[0].split('#');
-		// physicsLines = await chunk.call(physicsLines.split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
-		// 	postMessage({ cmd: 'PROGRESS', value: progress });
-		// 	postMessage({
-		// 		cmd: 'PARSED',
-		// 		payload: { physicsLines: chunkData }
-		// 	});
-		// });
-		// sceneryLines = await chunk.call(sceneryLines.split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
-		// 	postMessage({ cmd: 'PROGRESS', value: progress });
-		// 	postMessage({
-		// 		cmd: 'PARSED',
-		// 		payload: { sceneryLines: chunkData }
-		// 	});
-		// });
-		// powerups = await chunk.call(powerups.split(/\s*,+\s*/g), processPowerup, (chunkData, { progress }) => {
-		// 	postMessage({ cmd: 'PROGRESS', value: progress });
-		// 	postMessage({
-		// 		cmd: 'PARSED',
-		// 		payload: { powerups: chunkData }
-		// 	});
-		// });
+		sceneryLines = await chunk.call(code[1].split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
+			postMessage({ cmd: 'PROGRESS', type: 'sceneryLines', value: progress });
+			const { buffer } = new Int32Array(chunkData);
+			postMessage({
+				cmd: 'PARSED',
+				partial: true,
+				payload: { sceneryLines: buffer },
+				type: 'sceneryLines'
+			}, [buffer]);
+		});
+		physicsLines = await chunk.call(code[0].split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
+			postMessage({ cmd: 'PROGRESS', type: 'physicsLines', value: progress });
+			const { buffer } = new Int32Array(chunkData);
+			postMessage({
+				cmd: 'PARSED',
+				partial: true,
+				payload: { physicsLines: buffer },
+				type: 'physicsLines'
+			}, [buffer]);
+		});
+		powerups = await chunk.call(code[2].split(/\s*,+\s*/g), processPowerup, (chunkData, { progress }) => {
+			postMessage({ cmd: 'PROGRESS', value: progress });
+			postMessage({
+				cmd: 'PARSED',
+				partial: true,
+				payload: { powerups: chunkData },
+				type: 'powerups'
+			});
+		});
 
 		// Parallel parsing
-		const [physicsLines, sceneryLines, powerups] = await Promise.all([
-			chunk.call(code[0].split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
-				// postMessage({ cmd: 'PROGRESS', value: progress });
-				postMessage({
-					cmd: 'PROGRESS',
-					type: 'physicsLines',
-					value: progress
-				});
-				postMessage({
-					cmd: 'PARSED',
-					partial: true,
-					payload: { physicsLines: chunkData }
-				});
-			}),
-			chunk.call(code[1].split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
-				// postMessage({ cmd: 'PROGRESS', value: progress });
-				postMessage({
-					cmd: 'PROGRESS',
-					type: 'sceneryLines',
-					value: progress
-				});
-				postMessage({
-					cmd: 'PARSED',
-					partial: true,
-					payload: { sceneryLines: chunkData }
-				});
-			}),
-			chunk.call(code[2].split(/\s*,+\s*/g), processPowerup, (chunkData, { progress }) => {
-				// postMessage({ cmd: 'PROGRESS', value: progress });
-				postMessage({
-					cmd: 'PROGRESS',
-					type: 'powerups',
-					value: progress
-				});
-				postMessage({
-					cmd: 'PARSED',
-					partial: true,
-					payload: { powerups: chunkData }
-				});
-			})
-		]);
+		// const [physicsLines, sceneryLines, powerups] = await Promise.all([
+		// 	chunk.call(code[1].split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
+		// 		// postMessage({ cmd: 'PROGRESS', value: progress });
+		// 		postMessage({
+		// 			cmd: 'PROGRESS',
+		// 			type: 'sceneryLines',
+		// 			value: progress
+		// 		});
+		// 		const { buffer } = new Int32Array(chunkData);
+		// 		postMessage({
+		// 			cmd: 'PARSED',
+		// 			partial: true,
+		// 			payload: { sceneryLines: buffer },
+		// 			type: 'scenery'
+		// 		}, [buffer]);
+		// 	}),
+		// 	chunk.call(code[0].split(/\s*,+\s*/g), processLine, (chunkData, { progress }) => {
+		// 		// postMessage({ cmd: 'PROGRESS', value: progress });
+		// 		postMessage({
+		// 			cmd: 'PROGRESS',
+		// 			type: 'physicsLines',
+		// 			value: progress
+		// 		});
+		// 		const { buffer } = new Int32Array(chunkData);
+		// 		postMessage({
+		// 			cmd: 'PARSED',
+		// 			partial: true,
+		// 			payload: { physicsLines: buffer },
+		// 			type: 'track'
+		// 		}, [buffer]);
+		// 	}),
+		// 	chunk.call(code[2].split(/\s*,+\s*/g), processPowerup, (chunkData, { progress }) => {
+		// 		// postMessage({ cmd: 'PROGRESS', value: progress });
+		// 		postMessage({
+		// 			cmd: 'PROGRESS',
+		// 			type: 'powerups',
+		// 			value: progress
+		// 		});
+		// 		postMessage({
+		// 			cmd: 'PARSED',
+		// 			partial: true,
+		// 			payload: { powerups: chunkData },
+		// 			type: 'powerups'
+		// 		});
+		// 	})
+		// ]);
 		// postMessage({
 		// 	cmd: 'PARSED',
 		// 	payload: {
@@ -78,10 +91,11 @@ addEventListener('message', async ({ data }) => {
 		// 		powerups
 		// 	}
 		// });
-		postMessage({
-			cmd: 'PARSED',
-			partial: false
-		});
+		// postMessage({
+		// 	cmd: 'PARSED',
+		// 	partial: false
+		// });
+		postMessage({ cmd: 'COMPLETE' });
 		break;
 	}
 
@@ -93,16 +107,27 @@ addEventListener('message', async ({ data }) => {
 function processLine(raw) {
 	const line = raw.split(/\s+/g);
 	if (line.length < 4) return false;
-	const lines = [];
-	for (let o = 0; o < line.length - 2; o += 2) {
-		let x = parseInt(line[o], 32),
-			y = parseInt(line[o + 1], 32),
-			l = parseInt(line[o + 2], 32),
-			c = parseInt(line[o + 3], 32);
-		isNaN(x + y + l + c) || lines.push([{ x, y }, { x: l, y: c }])
+
+	const N = Math.floor(line.length / 2)
+		, lines = new Int32Array(4 * (N - 1));
+
+	let index = 0
+	for (let i = 0; i < N - 1; i++) {
+		const x1 = parseInt(line[2 * i], 32)
+			, y1 = parseInt(line[2 * i + 1], 32)
+			, x2 = parseInt(line[2 * (i + 1)], 32)
+			, y2 = parseInt(line[2 * (i + 1) + 1], 32);
+
+		if (isNaN(x1 + y1 + x2 + y2)) continue;
+
+		lines[index++] = x1;
+		lines[index++] = y1;
+		lines[index++] = x2;
+		lines[index++] = y2;
 	}
 
-	return lines;
+	if (index === lines.length) return lines;
+	return lines.subarray(0, index)
 }
 
 function processPowerup(raw) {
@@ -146,7 +171,7 @@ function parseLines(raw) {
 	for (const lineData of raw.split(/\s*,+\s*/g))
 		lines.push(...processLine(lineData));
 
-	return lines;
+	return new Int32Array(lines);
 }
 
 function parsePowerups(raw) {
@@ -167,7 +192,7 @@ async function chunk(processChunk, chunkComplete, index = 0, result = []) {
 	while (chunkSize-- && index < this.length) {
 		const processed = processChunk(this[index++]);
 		if (processed === false) continue;
-		if (Array.isArray(processed)) chunkData.push(...processed);
+		if (Array.isArray(processed) || ArrayBuffer.isView(processed)) chunkData.push(...processed);
 		else chunkData.push(processed);
 	}
 

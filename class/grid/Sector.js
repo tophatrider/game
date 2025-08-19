@@ -20,46 +20,70 @@ export default class {
 		this.parent.renderer.createSector(this.column, this.row);
 	}
 
-	add(item) {
-		if (arguments.length > 1) {
-			for (const item of arguments)
-				this.add(item);
-			return this;
-		} else if (item instanceof Array) {
-			return this.add(...item);
-		} else if (this.physics.includes(item) || this.scenery.includes(item) || this.powerups.includes(item)) {
-			return this;
+	get length() {
+		return this.physics.length + this.scenery.length + this.powerups.length
+	}
+
+	add(...items) {
+		if (items[0] instanceof Array) return this.add(...items[0], items.slice(1));
+		for (const item of items.filter(item => typeof item == 'object' && item !== null && !this.has(item))) {
+			if (item.constructor.type === 'physics') {
+				this.physics.push(item);
+				// this.parent.scene.track.processing || this.parent.renderer.addItem(this.column, this.row, item.serialize());
+				// this.parent.scene.track.processing || this.parent.renderer.addPhysics(this.column, this.row, item.serialize());
+			} else if (item.constructor.type === 'scenery') {
+				this.scenery.push(item);
+				// this.parent.scene.track.processing || this.parent.renderer.addScenery(this.column, this.row, item.serialize());
+			} else {
+				this.powerups.push(item);
+			}
 		}
 
-		if (item.type == 'physics') {
-			this.physics.push(item);
-			// this.parent.scene.processing || this.parent.renderer.addItem(this.column, this.row, item.toJSON());
-		} else if (item.type == 'scenery') {
-			this.scenery.push(item);
-			this.parent.scene.processing || this.parent.renderer.addScenery(this.column, this.row, item.toJSON());
-		} else {
-			this.powerups.push(item);
+		if (this.parent.scene.track.processing) return;
+		const lines = items.filter(item => item.constructor.type === 'physics' || item.constructor.type === 'scenery');
+		if (lines.length < 1) return;
+		const view = new Int32Array(lines.length * 4);
+		for (let i = 0; i < lines.length; i++) {
+			const {a, b} = lines[i];
+			view[i*4]   = a.x;
+			view[i*4+1] = a.y;
+			view[i*4+2] = b.x;
+			view[i*4+3] = b.y;
 		}
+		this.parent.renderer.push(this.column, this.row, view.buffer);
+	}
+
+	has(item) {
+		return this.physics.includes(item) || this.scenery.includes(item) || this.powerups.includes(item)
 	}
 
 	cache() {
 		if (this._rendering) return;
 		this._rendering = true;
-		this.parent.renderer.render({
-			column: this.column,
-			row: this.row,
-			// data: this.serialize()
-			data: {
-				physicsLines: this.physics.map(line => line.toJSON())
-			}
-		});
+		this.dirty && this.push();
+		this.parent.renderer.render(this.column, this.row);
+	}
+
+	push() {
+		this.dirty = false;
+		const view = new Int32Array(this.physics.length * 4);
+		for (let i = 0; i < this.physics.length; i++) {
+			const l = this.physics[i];
+			view[i*4]   = l.a.x;
+			view[i*4+1] = l.a.y;
+			view[i*4+2] = l.b.x;
+			view[i*4+3] = l.b.y;
+		}
+
+		this.parent.renderer.push(this.column, this.row, view.buffer);
 	}
 
 	render(ctx) {
 		const offsetX = this.column * this.parent.scale
-			, offsetY = this.row * this.parent.scale;
-		this.cached || this.cache();
-		this.bitmap && ctx.drawImage(this.bitmap, Math.floor(ctx.canvas.width / 2 + (offsetX - this.parent.scene.camera.x) * this.parent.scene.camera.zoom), Math.floor(ctx.canvas.height / 2 + (offsetY - this.parent.scene.camera.y) * this.parent.scene.camera.zoom), this.parent.scale * this.parent.scene.camera.zoom, this.parent.scale * this.parent.scene.camera.zoom);
+			, offsetY = this.row * this.parent.scale
+			, camera = this.parent.scene.camera;
+		this.cached || this.cache(); // remove -- cache when new item is added
+		this.bitmap && ctx.drawImage(this.bitmap, Math.floor(camera.viewportWidth * .5 + (offsetX - camera.x) * camera.zoom), Math.floor(camera.viewportHeight * .5 + (offsetY - camera.y) * camera.zoom), this.parent.scale * camera.zoom, this.parent.scale * camera.zoom);
 	}
 
 	/* reset() { */ fix() { // escape collision
@@ -74,7 +98,7 @@ export default class {
 		}
 
 		if (!part.parent.dead) {
-			const powerups = this.powerups.filter(powerup => !powerup.used);
+			const powerups = this.powerups.filter(powerup => !part.parent.player.itemsConsumed.has(powerup.id));
 			for (let powerup = powerups.length - 1; powerup >= 0; powerup--) {
 				powerups[powerup].collide(part);
 			}
@@ -92,9 +116,9 @@ export default class {
 
 	serialize() {
 		return {
-			physicsLines: this.physics.map(line => line.toJSON()),
-			sceneryLines: this.scenery.map(line => line.toJSON()),
-			powerups: this.powerups.map(p => p.toJSON?.() ?? null).filter(Boolean)
+			physicsLines: this.physics.map(line => line.serialize()),
+			sceneryLines: this.scenery.map(line => line.serialize()),
+			powerups: this.powerups.map(p => p.serialize?.() ?? null).filter(Boolean)
 		};
 	}
 
@@ -134,14 +158,17 @@ export default class {
 			}
 		}
 
-		// this.parent.renderer.removeItem(this.column, this.row, item.toJSON());
+		// this.parent.renderer.removeItem(this.column, this.row, item.serialize());
 
 		item.removed = true;
-		this.cached = false;
+		if (this.length < 1) this.delete();
+		else this.cached = false;
 		return item;
 	}
 
 	delete() {
-		return this.parent.delete(this.row, this.column);
+		const visibleIndex = this.parent.visible.indexOf(this);
+		visibleIndex !== -1 && this.parent.visible.splice(visibleIndex, 1);
+		return this.parent.delete(this.column, this.row);
 	}
 }

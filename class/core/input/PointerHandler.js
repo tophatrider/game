@@ -1,17 +1,19 @@
 import EventRelay from "../EventRelay.js";
-import StaticVector from "../geometry/StaticVector.js";
-// import SmartVector from "../math/SmartVector.js";
-import Vector from "../geometry/Vector.js";
+import TemporalVector from "../geometry/TemporalVector.js";
 import Pointer from "./Pointer.js";
+
+const IS_SAFARI = (() => {
+    const ua = navigator.userAgent;
+    return /^((?!chrome|android).)*safari/i.test(ua) &&
+           /Macintosh|iPhone|iPad|iPod/.test(ua);
+})();
 
 export default class PointerHandler extends EventRelay {
 	_pointers = new Map();
 	down = false;
-	old = new StaticVector;
-	position = new Vector; // new SmartVector;
+	position = new TemporalVector;
 	primary = null;
-	rawPosition = new Vector;
-	stroke = new Vector;
+	raw = new TemporalVector;
 	get locked() {
 		return document.pointerLockElement === this.target;
 	}
@@ -61,11 +63,10 @@ export default class PointerHandler extends EventRelay {
 		if (event.isPrimary) {
 			this.down = true;
 			this.primary = pointer;
-			this.old = this.position.toStatic();
 			this.isPrimary = event.button === 0;
 			if (!this.locked) {
-				this.rawPosition.set(event.offsetX, event.offsetY, true);
-				this.position.set(this.rawPosition.toCanvas(this.target));
+				this.raw.set(event.offsetX, event.offsetY);
+				this.position.set(this.raw, true);
 				this.target.setPointerCapture(event.pointerId);
 			}
 		}
@@ -88,13 +89,12 @@ export default class PointerHandler extends EventRelay {
 		pointer?._setPointerUp(event, this.target);
 		if (event.isPrimary) {
 			if (this.locked) {
-				this.rawPosition.add(event.movementX, event.movementY, true);
+				this.raw.add(event.offsetX, event.offsetY, TemporalVector.SKIP_OLD);
 			} else {
-				this.rawPosition.set(event.offsetX, event.offsetY, true);
+				this.raw.set(event.offsetX, event.offsetY, TemporalVector.SKIP_OLD);
 			}
 
-			this.stroke.set(this.position).sub(this.old);
-			this.position.set(this.rawPosition.toCanvas(this.target));
+			this.position.set(this.raw, true, TemporalVector.SKIP_OLD);
 		}
 
 		this.emit('move', event, pointer ?? null);
@@ -108,8 +108,8 @@ export default class PointerHandler extends EventRelay {
 			this.down = false;
 			this.primary = null;
 			if (!this.locked) {
-				this.rawPosition.set(event.offsetX, event.offsetY, true);
-				this.position.set(this.rawPosition.toCanvas(this.target));
+				this.raw.set(event.offsetX, event.offsetY, TemporalVector.SKIP_OLD);
+				this.position.set(this.raw, true, TemporalVector.SKIP_OLD);
 				this.target.releasePointerCapture(event.pointerId);
 			}
 		}
@@ -139,7 +139,7 @@ export default class PointerHandler extends EventRelay {
 		super.listen(target, 'pointermove', this._handlePointerMove.bind(this), { passive: true });
 		super.listen(target, 'pointerup', this._handlePointerUp.bind(this), { passive: true });
 		super.listen(target, 'wheel', this._handleScroll.bind(this));
-		if (isSafari()) {
+		if (IS_SAFARI) {
 			super.listen(window, 'gesturestart', e => e.preventDefault());
 			super.listen(window, 'gesturechange', e => e.preventDefault());
 			super.listen(window, 'gestureend', e => e.preventDefault());
@@ -162,17 +162,14 @@ export default class PointerHandler extends EventRelay {
 
 	dispose() {
 		super.dispose();
+		this._pointers.clear();
 		this.target = null;
 	}
 
 	static get isTouchScreen() {
-		return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
-	}
-}
-
-function isSafari() {
-	const ua = navigator.userAgent;
-	const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-	const isAppleDevice = /Macintosh|iPhone|iPad|iPod/.test(ua);
-	return isSafari && isAppleDevice;
+        return 'ontouchstart' in window ||
+               navigator.maxTouchPoints > 0 ||
+               navigator.msMaxTouchPoints > 0 ||
+               window.matchMedia('(pointer: coarse)').matches;
+    }
 }

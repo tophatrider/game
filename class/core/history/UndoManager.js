@@ -51,6 +51,7 @@ export default class UndoManager extends EventRelay {
 
 	clear() {
 		this.#stack.splice(0);
+		this.unlisten();
 	}
 
 	dispose() {

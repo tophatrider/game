@@ -9,8 +9,8 @@ export default class RendererBridge {
 		});
 	}
 
-	_send(type, data = {}) {
-		this.worker.postMessage({ ...data, type });
+	_send(type, data = {}, transfer) {
+		this.worker.postMessage({ ...data, type }, transfer);
 	}
 
 	config(config) {
@@ -22,15 +22,23 @@ export default class RendererBridge {
 	}
 
 	addItem(column, row, item) {
-		this._send('ADD_ITEM', { column, row, item });
+		this._send('PUSH', { column, row, item });
+	}
+
+	push(column, row, buffer) {
+		this._send('PUSH', { column, row, buffer }, [buffer]);
+	}
+
+	addPhysics(column, row, item) {
+		this._send('ADD_PHYSICS', { column, row, item });
 	}
 
 	addScenery(column, row, item) {
 		this._send('ADD_SCENERY', { column, row, item });
 	}
 
-	render({ column, row, data }) {
-		this._send('RENDER', { column, row, data });
+	render(column, row) {
+		this._send('RENDER', { column, row });
 	}
 
 	removeScenery(column, row, itemId) {

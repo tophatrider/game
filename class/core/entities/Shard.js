@@ -1,4 +1,4 @@
-import Vector from "../geometry/Vector.js";
+import Vector from "../geometry/Vector2.js";
 import Mass from "./Mass.js";
 
 export default class Shard extends Mass {
@@ -16,7 +16,7 @@ export default class Shard extends Mass {
 
 	draw(ctx) {
 		ctx.beginPath();
-		const pos = this.pos.toPixel();
+		const pos = this.parent.player.scene.camera.toScreen(this.pos);
 		let b = this.shape[0] * this.size * this.parent.player.scene.camera.zoom;
 		ctx.moveTo(pos.x + b * Math.cos(this.rotation), pos.y + b * Math.sin(this.rotation));
 		for (let e = 2; e < 8; e++) {
@@ -24,15 +24,18 @@ export default class Shard extends Mass {
 			ctx.lineTo(pos.x + b * Math.cos(this.rotation + 6.283 * e / 8), pos.y + b * Math.sin(this.rotation + 6.283 * e / 8));
 		}
 
+		const fill = ctx.fillStyle;
+		ctx.fillStyle = this.parent.player.scene.game.colorScheme.palette.track;
 		ctx.fill();
+		ctx.fillStyle = fill;
 	}
 
 	drive(velocity) {
 		super.drive(...arguments);
 		this.rotation += this.rotationSpeed;
 		if (velocity.length > 0) {
-			velocity = new Vector(-velocity.y / velocity.length, velocity.x / velocity.length);
-			this.old.add(velocity.scale(velocity.dot(this.velocity) * 0.8));
+			velocity.set(-velocity.y / velocity.length, velocity.x / velocity.length);
+			this.old.add(velocity.clone().scale(velocity.dot(this.velocity) * 0.8));
 		}
 	}
 

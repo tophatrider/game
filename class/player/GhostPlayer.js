@@ -1,77 +1,30 @@
-import StaticInput from "../core/input/StaticInput.js";
 import BasePlayer from "./BasePlayer.js";
+import StaticInput from "../core/input/StaticInput.js";
 
 export default class GhostPlayer extends BasePlayer {
-	gamepad = new StaticInput();
-	ghost = true;
-	ghostIterator = null;
-	runTime = 0;
-	// playbackTicks = 0;
-	constructor(parent, { records, time }) {
+	gamepad = new StaticInput;
+	playbackTicks = 0;
+	constructor(parent, config = {}) {
 		super(...arguments);
-		this.ghostIterator = this.ghostPlayer();
-		this.records = records;
-		this.runTime = time;
-		// this.playbackTicks = 0;
+		Object.defineProperty(this, 'ghost', { value: true });
+		Object.defineProperty(this, 'iterator', { value: this.#createIterator(), writable: true });
+		for (const key in config) {
+			const val = config[key];
+			switch(key) {
+			case 'records':
+				this.records.splice(0, this.records.length, ...val);
+			}
+		}
+
+		this.duration = parseInt(config.time) || Math.max(...this.records.flatMap(s => Array.from(s)));
 	}
 
-	// fixedUpdate() {
-	// 	if (this.pendingConsumables) {
-	// 		if (this.pendingConsumables & 2) this.checkComplete();
-	// 		if (this.pendingConsumables & 1) {
-	// 			this.snapshots.push(this.save());
-	// 			for (const playerGhost of this.scene.ghosts) {
-	// 				playerGhost.snapshots.push(playerGhost.save());
-	// 			}
-	// 		}
-
-	// 		this.pendingConsumables = 0;
-	// 	}
-
-	// 	if (this.scene.targets > 0 && this.targetsCollected === this.scene.targets) {
-	// 		return;
-	// 	} else if (this.explosion) {
-	// 		this.explosion.fixedUpdate();
-	// 		return;
-	// 	}
-
-	// 	// if (this.ghost) {
-	// 	// 	this.records[0].has(this.scene.currentTime) && this.gamepad._toggle('left');
-	// 	// 	this.records[1].has(this.scene.currentTime) && this.gamepad._toggle('right');
-	// 	// 	this.records[2].has(this.scene.currentTime) && this.gamepad._toggle('up');
-	// 	// 	this.records[3].has(this.scene.currentTime) && this.gamepad._toggle('down');
-	// 	// 	this.records[4].has(this.scene.currentTime) && this.vehicle.swap();
-	// 	// }
-
-	// 	this.vehicle.fixedUpdate();
-	// 	if (this.dead) {
-	// 		this.ragdoll.fixedUpdate();
-	// 		this.hat && this.hat.fixedUpdate();
-	// 	} else {
-	// 		this.ragdoll.setPosition(this.vehicle.rider);
-	// 	}
-	// }
-
-	// #ticks = 0;
-	// set currentTime(value) {
-	// 	if (this.ghost) {
-	// 		this.records[0].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('left');
-	// 		this.records[1].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('right');
-	// 		this.records[2].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('up');
-	// 		this.records[3].has(this.#ticks * this.scene.game.max) && this.gamepad._toggle('down');
-	// 		this.records[4].has(this.#ticks * this.scene.game.max) && this.vehicle.swap();
-	// 	}
-
-	// 	this.fixedUpdate();
-	// 	this.#ticks = value;
-	// }
-
-	*ghostPlayer(nextTick = 0) {
-		const progress = document.querySelector('.replay-progress');
+	*#createIterator(nextTick = 0) {
+		// const progress = document.querySelector('.replay-progress');
 		const snapshots = new Map();
 		this.playbackTicks = 0;
 		while (this.targetsCollected !== this.scene.targets) {
-			snapshots.has(this.playbackTicks) || snapshots.set(this.playbackTicks, this.save());
+			snapshots.has(this.playbackTicks) || snapshots.set(this.playbackTicks, this.serialize());
 			if (this.playbackTicks >= nextTick) {
 				const value = parseInt(yield this.playbackTicks);
 				if (isFinite(value)) {
@@ -81,7 +34,7 @@ export default class GhostPlayer extends BasePlayer {
 						this.playbackTicks = value;
 					}
 
-					this.scene.camera.controller.setFocalPoint(this.vehicle.hitbox);
+					this.scene.camera.controller.setFocalPoint(this.hitbox);
 					this.scene.camera.controller.snapToTarget();
 					nextTick = value;
 					continue;
@@ -90,18 +43,27 @@ export default class GhostPlayer extends BasePlayer {
 				}
 			}
 
-			this.records[0].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('left');
-			this.records[1].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('right');
-			this.records[2].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('up');
-			this.records[3].has(this.playbackTicks * this.scene.game._updateInterval) && this.gamepad._toggle('down');
-			this.records[4].has(this.playbackTicks * this.scene.game._updateInterval) && this.vehicle.swap();
-
 			this.fixedUpdate();
 			this.playbackTicks++;
-			progress && progress.setAttribute('value', this.playbackTicks);
+			this.scene.game.emit('playbackTick', this.playbackTicks);
+			// progress && progress.setAttribute('value', this.playbackTicks);
 		}
 
 		return snapshots;
+	}
+
+	seek(time) {
+		this.iterator.next(time);
+	}
+
+	fixedUpdate() {
+		const t = this.playbackTicks;
+		this.records[0].has(t) && this.gamepad._toggle('left');
+		this.records[1].has(t) && this.gamepad._toggle('right');
+		this.records[2].has(t) && this.gamepad._toggle('up');
+		this.records[3].has(t) && this.gamepad._toggle('down');
+		this.records[4].has(t) && this.vehicle.swap();
+		super.fixedUpdate();
 	}
 
 	restore(snapshot) {
@@ -113,7 +75,29 @@ export default class GhostPlayer extends BasePlayer {
 	reset() {
 		this.gamepad.downKeys.clear();
 		this.playbackTicks = 0;
-		this.ghostIterator = this.ghostPlayer();
+		this.iterator = this.#createIterator();
 		super.reset(...arguments);
+	}
+
+	static parseRecords(parts, ups = 50) {
+		const upi = 1e3 / ups;
+		const records = [];
+		for (const input in parts) {
+			const entries = parts[input].split(/\s+/g);
+			const record = new Set;
+			for (const i in entries) {
+				const t = entries[i];
+				if (isNaN(t)) {
+					console.warn(`[GhostPlayer::parseRecords] Playback time entry is NaN: ${JSON.stringify(val)}`);
+					continue;
+				}
+
+				record.add(parseInt(t) / upi);
+			}
+
+			records.push(record);
+		}
+
+		return records;
 	}
 }

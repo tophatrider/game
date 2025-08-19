@@ -17,8 +17,9 @@ gameContainer.addEventListener('ready', async function({ detail: game }) {
 	game.on('playerFocusChange', function(player) {
 		const progress = this.container.querySelector('.replay-progress');
 		if (!progress) return console.warn('Progress bar not found');
-		this.container.classList.toggle('replaying', this.scene.camera.controller.focalPoint !== this.scene.firstPlayer.vehicle.hitbox);
-		if (this.scene.camera.controller.focalPoint === this.scene.firstPlayer.vehicle.hitbox) {
+		this.container.classList.toggle('replaying', this.scene.camera.controller.focalPoint && this.scene.camera.controller.focalPoint !== this.scene.firstPlayer.hitbox);
+		if (!this.scene.camera.controller.focalPoint) return;
+		if (this.scene.camera.controller.focalPoint === this.scene.firstPlayer.hitbox) {
 			gameContainer.removeAttribute('replaying');
 			progress.style.setProperty('display', 'none');
 			return;
@@ -28,6 +29,11 @@ gameContainer.addEventListener('ready', async function({ detail: game }) {
 		progress.style.removeProperty('display'),
 		progress.setAttribute('max', player.runTime ?? 100),
 		progress.setAttribute('value', player.ticks);
+	});
+
+	game.on('playerFocusLost', function() {
+		gameContainer.classList.remove('replaying');
+		gameContainer.removeAttribute('replaying');
 	});
 
 	game.on('replayAdd', function(player) {
@@ -47,7 +53,7 @@ gameContainer.addEventListener('ready', async function({ detail: game }) {
 	game.on('reset', function() {
 		const progress = this.container.querySelector('.replay-progress');
 		if (!progress) return console.warn('Progress bar not found');
-		this.scene.camera.controller.focalPoint === this.scene.firstPlayer.vehicle.hitbox ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
+		this.scene.camera.controller.focalPoint === this.scene.firstPlayer.hitbox ? progress.style.setProperty('display', 'none') : (progress.style.removeProperty('display'),
 		progress.setAttribute('max', this.scene.camera.controller.focalPoint.parent.player.runTime ?? 100),
 		progress.setAttribute('value', this.scene.camera.controller.focalPoint.parent.player.ticks));
 	});

@@ -1,12 +1,13 @@
 import Tool from "./Tool.js";
-import Antigravity from "../items/Antigravity.js";
-import Bomb from "../items/Bomb.js";
-import Boost from "../items/Boost.js";
-import Checkpoint from "../items/Checkpoint.js";
-import Gravity from "../items/Gravity.js";
-import Slowmo from "../items/Slowmo.js";
-import Target from "../items/Target.js";
-import Teleporter from "../items/Teleporter.js";
+import Antigravity from "../objects/powerups/Antigravity.js";
+import Bomb from "../objects/powerups/Bomb.js";
+import Boost from "../objects/powerups/Boost.js";
+import Checkpoint from "../objects/powerups/Checkpoint.js";
+import Gravity from "../objects/powerups/Gravity.js";
+import Slowmo from "../objects/powerups/Slowmo.js";
+import Target from "../objects/powerups/Target.js";
+import Teleporter from "../objects/powerups/Teleporter.js";
+import GravitationalField from "../objects/powerups/GravitationalField.js";
 
 const P = {
 	antigravity: Antigravity,
@@ -16,42 +17,36 @@ const P = {
 	gravity: Gravity,
 	'slow-mo': Slowmo,
 	goal: Target,
-	teleporter: Teleporter
+	teleporter: Teleporter,
+	'gravitational-field': GravitationalField
 };
 
 export default class extends Tool {
-	addPowerup(powerup) {
-		let x = Math.floor(powerup.position.x / this.scene.sectors.scale);
-		let y = Math.floor(powerup.position.y / this.scene.sectors.scale);
-		this.scene.sectors.sector(x, y, true).powerups.push(powerup);
-		if (/^(checkpoint|goal|teleporter)$/i.test(this.parent.selected)) {
-			this.scene.collectables.push(powerup);
-			if (powerup instanceof Teleporter) {
-				x = Math.floor(powerup.alt.x / this.scene.sectors.scale);
-				y = Math.floor(powerup.alt.y / this.scene.sectors.scale);
-				this.scene.sectors.sector(x, y, true).powerups.push(powerup);
-			}
-		}
+	onActivate() {
+		this.powerup = new P[this.parent.selected](this.scene, ...this.scene.camera.toWorld(this.mouse.raw));
 	}
 
-	clip() {
+	onPress() {
+		this.powerup.position.set(this.scene.camera.toWorld(this.mouse.raw.old));
+	}
+
+	onStroke() {
+		if (this.mouse.down) return;
+		this.powerup.position.set(this.scene.camera.toWorld(this.mouse.raw));
+	}
+
+	onClip() {
 		this.addPowerup(this.powerup);
-		this.update();
+		this.onActivate();
+	}
+
+	addPowerup(powerup) {
+		this.scene.track.addPowerup(powerup);
 	}
 
 	draw(ctx) {
+		const fill = ctx.fillStyle;
 		this.powerup.draw(ctx);
-	}
-
-	press() {
-		this.powerup.position.set(this.mouse.old);
-	}
-
-	stroke() {
-		this.powerup.position.set(this.mouse.position);
-	}
-
-	update() {
-		this.powerup = new P[this.parent.selected](this.scene, this.mouse.position.x, this.mouse.position.y);
+		ctx.fillStyle = fill;
 	}
 }

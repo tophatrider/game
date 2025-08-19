@@ -1,28 +1,18 @@
-import Line from "./Line.js";
+import Shape from "./Shape.js";
 
-export default class extends Line {
+export default class extends Shape {
 	get radius() {
-		return Math.sqrt((this.mouse.position.x - this.mouse.old.x) ** 2 + (this.mouse.position.y - this.mouse.old.y) ** 2);
+		return Math.sqrt((this.mouse.raw.x - this.mouse.raw.old.x) ** 2 + (this.mouse.raw.y - this.mouse.raw.old.y) ** 2);
 	}
 
-	length = 2;
-	lines = [];
-	scroll(event) {
-		if (this.length > 4 && (0 < event.detail || event.wheelDelta < 0)) {
-			this.length -= 8;
-		} else if (this.length < 200 && (0 > event.detail || event.wheelDelta > 0)) {
-			this.length += 8;
-		}
-	}
-
-	stroke() {
-		if (!this.mouse.down || this.mouse.old.distanceTo(this.mouse.position) < 4) return;
+	onStroke() {
+		if (!this.mouse.down || this.mouse.raw.old.distanceTo(this.mouse.raw) < 4) return;
 		for (const line of this.lines)
 			line.remove();
 
 		const points = []; this.lines = [];
 		for (let i = 0; i <= 360; i += this.length) {
-			points.push(this.mouse.old.sum({
+			points.push(this.mouse.raw.old.sum({
 				x: this.radius * Math.cos(i * Math.PI / 180),
 				y: this.radius * Math.sin(i * Math.PI / 180)
 			}));
@@ -31,9 +21,5 @@ export default class extends Line {
 		points.push(points[0]);
 		for (let i = 0; i < points.length - 1; i++)
 			this.lines.push(this.scene.addLine(points[i], points[i + 1], this.scenery));
-	}
-
-	clip() {
-		this.lines.splice(0);
 	}
 }

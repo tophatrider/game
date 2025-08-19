@@ -1,23 +1,25 @@
-export default class BaseVector {
-	constructor(x = 0, y = 0, normalize = false) {
-		if (typeof x == 'object') {
-			normalize = y;
-			if (x instanceof Array) {
-				[x, y] = x;
-			} else {
-				y = x.y || x[1];
-				x = x.x || x[0];
-			}
+export default class BaseVector extends Float64Array {
+	static ApplyPixelRatio = Symbol('apply_dpr');
+
+	constructor(x = 0, y = 0, ...flags) {
+		super(2);
+		if (x instanceof PointerEvent || x instanceof MouseEvent || x instanceof Touch) {
+			y = x.offsetY;
+			x = x.offsetX;
+			flags.includes(BaseVector.ApplyPixelRatio) || flags.push(BaseVector.ApplyPixelRatio);
 		}
 
-		this.x = parseFloat(x) || 0;
-		this.y = parseFloat(y) || 0;
-		if (normalize) {
-			const dpr = window.devicePixelRatio;
-			this.x *= dpr;
-			this.y *= dpr;
-		}
+		this.constructor.assignParsed(this, x, y, ...flags);
 	}
+
+	get x() { return this[0] }
+	set x(v) { this[0] = v }
+	get y() { return this[1] }
+	set y(v) { this[1] = v }
+
+	// get copy() {
+	// 	return this.clone();
+	// }
 
 	get length() {
 		return Math.sqrt(this.lengthSquared());
@@ -56,24 +58,67 @@ export default class BaseVector {
 		return new this.constructor(this.x, this.y, ...args);
 	}
 
-	toArray() {
-		return [this.x, this.y];
-	}
-
-	toCanvas(canvas) {
-		return this.constructor.from(Math.round((this.x - canvas.width / 2) / game.scene.camera.zoom + game.scene.camera.x), Math.round((this.y - canvas.height / 2) / game.scene.camera.zoom + game.scene.camera.y));
-	}
-
-	toJSON() {
+	serialize() {
 		return { x: this.x, y: this.y };
 	}
 
-	toPixel(game = window.game) {
-		return this.constructor.from((this.x - game.scene.camera.x) * game.scene.camera.zoom + game.canvas.width / 2, (this.y - game.scene.camera.y) * game.scene.camera.zoom + game.canvas.height / 2);
+	toJSON() {
+		return this.serialize();
+	}
+
+	toStatic() {
+		return Object.freeze(this.serialize());
 	}
 
 	toString() {
 		return this.x.toString(32) + ' ' + this.y.toString(32);
+	}
+
+	// [Symbol.isConcatSpreadable] = true;
+	// *[Symbol.iterator]() {
+	// 	yield this[0];
+	// 	yield this[1];
+	// }
+
+	static assign(v1, v2) {
+		v1.x = v2.x;
+		v1.y = v2.y;
+		return v1;
+	}
+
+	static assignParsed(target, x, y, ...flags) {
+		if (typeof x === 'object') {
+			if (x === null) throw new TypeError(`Invalid entry: ${x}`);
+			flags.unshift(y);
+			// flags = [y, ...flags]; // possibly faster
+			if (Array.isArray(x)) {
+				if (x.length < 2) throw new RangeError(`Invalid length: ${x.length}`);
+				y = x[1];
+				x = x[0];
+			} else {
+				y = x.y;
+				x = x.x;
+			}
+		}
+
+		let px = parseFloat(x)
+		  , py = parseFloat(y);
+		if (isNaN(px) || isNaN(py)) throw new TypeError(`Non-numeric: (${x}, ${y})`);
+		if (flags.includes(BaseVector.ApplyPixelRatio)) {
+			const dpr = window.devicePixelRatio;
+			px *= dpr;
+			py *= dpr;
+		}
+
+		if (Array.isArray(target)) {
+			target[0] = px;
+			target[1] = py;
+		} else {
+			target.x = px;
+			target.y = py;
+		}
+
+		return target;
 	}
 
 	static from() {
@@ -81,14 +126,22 @@ export default class BaseVector {
 	}
 
 	static fromScreen(...args) {
-		return new this(...args, true);
+		return new this(...args, this.ApplyPixelRatio);
 	}
 
 	static isVector(obj) {
 		return obj && typeof obj.x === 'number' && typeof obj.y === 'number';
 	}
 
-	static zero() {
-		return new this(0, 0);
+	static parseAsArray() {
+		return this.assignParsed([], ...arguments);
+	}
+
+	static parseAsJSON() {
+		return this.assignParsed({}, ...arguments);
+	}
+
+	static [Symbol.hasInstance](instance) {
+		return instance && typeof instance.x === 'number' && typeof instance.y === 'number';
 	}
 }

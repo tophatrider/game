@@ -1,5 +1,4 @@
-import StaticVector from "../geometry/StaticVector.js";
-import Vector from "../geometry/Vector.js";
+import TemporalVector from "../geometry/TemporalVector.js";
 
 export default class Pointer {
 	down = false;
@@ -7,31 +6,24 @@ export default class Pointer {
 	initial = null;
 	isPrimary = null;
 	locked = false;
-	old = null;
-	position = new Vector;
-	raw = new Vector;
-	stroke = new Vector;
-	constructor(event, target) {
-		// Object.defineProperty(this, 'event', { value: event, writable: true });
-
+	position = new TemporalVector;
+	raw = new TemporalVector;
+	constructor(event) {
 		this.id = event.pointerId;
-		this.initial = new StaticVector(event.offsetX, event.offsetY, true);
+		this.initial = Object.freeze({ x: event.offsetX, y: event.offsetY });
 		this.isPrimary = event.isPrimary;
-
-		this._update(event, target);
+		this._update(...arguments);
 	}
 
-	_update(event, target) {
-		this.old = this.position.toStatic();
+	_update(event) {
 		if (this.locked) {
-			this.raw.add(event.movementX, event.movementY, true);
+			this.raw.add(event.movementX, event.movementY, TemporalVector.SKIP_OLD);
 			this.down || (this.initial = this.raw.toStatic());
 		} else {
-			this.raw.set(event.offsetX, event.offsetY, true);
+			this.raw.set(event.offsetX, event.offsetY, TemporalVector.SKIP_OLD);
 		}
 
-		this.position.set(this.raw.toCanvas(target));
-		this.stroke.set(this.position).sub(this.old);
+		this.position.set(this.raw, true, TemporalVector.SKIP_OLD);
 	}
 
 	_setPointerDown() {

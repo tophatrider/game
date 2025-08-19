@@ -1,16 +1,17 @@
-import Vector from "../geometry/Vector.js";
-import Body from "../physics/Body.js";
+import Vector2 from "../geometry/Vector2.js";
+import TemporalVector from "../geometry/TemporalVector.js";
 
 export default class {
-	real = new Body;
-	old = this.real.clone();
+	real = new Vector2; // new TemporalVector;
 	size = 10;
-	velocity = new Vector;
-	pos = this.real;
-	lastFixedPos = Object.assign(new Vector, {
-		recorded: true,
-		rendered:  false
-	});
+	velocity = new Vector2;
+
+	#displayPosition = this.real;
+	get pos() { return this.#displayPosition }
+
+	#lastFixedPos = new TemporalVector;
+	get old() { return this.#lastFixedPos }
+
 	constructor(parent, options) {
 		Object.defineProperty(this, 'parent', { value: parent, writable: true });
 		for (const key in options = Object.assign({}, options)) {
@@ -27,15 +28,22 @@ export default class {
 			}
 		}
 
-		this.old.set(this.real);
-		// Object.defineProperty(this.real, 'old', { value: this.real.clone(), writable: true });
+		this.#lastFixedPos.set(this.real);
+		this.#lastFixedPos.old.set(this.real);
 	}
 
 	fixedUpdate() {
-		this.pos = this.real;
+		this.old.set(this.real);
+		this.#displayPosition = this.real;
 	}
 
 	update(delta) {
-		this.pos = this.lastFixedPos.lerp(this.real, delta);
+		this.#displayPosition = this.#lastFixedPos.old.lerp(this.real, delta);
+	}
+
+	setPosition() {
+		this.real.set(...arguments);
+		this.#lastFixedPos.set(this.real);
+		this.#lastFixedPos.old.set(this.real);
 	}
 }

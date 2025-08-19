@@ -15,14 +15,14 @@ export default class Explosion extends Effect {
 			new Shard(this, this.pos),
 			new Shard(this, this.pos)
 		];
-		this.sizeDiminution = this.size / (this.duration / (this.player.scene.parent.ups / 2));
+		this.sizeDiminution = this.size / (this.duration / (this.player.scene.game.config.tickRate / 3));
 	}
 
 	draw(ctx) {
 		if (this.size > 0) {
 			// this.size -= this.sizeDiminution;
 			ctx.beginPath();
-			const pos = this.pos.toPixel();
+			const pos = this.player.scene.camera.toScreen(this.pos);
 			ctx.moveTo(pos.x + this.size / 2 * Math.cos(Math.random() * 2 * Math.PI) * this.player.scene.camera.zoom, pos.y + this.size / 2 * Math.sin(Math.random() * 2 * Math.PI) * this.player.scene.camera.zoom);
 			for (let a = 1; a < 16; a++) {
 				let d = (this.size + 30 * Math.random()) / 2 * this.player.scene.camera.zoom;

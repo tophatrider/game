@@ -7,17 +7,14 @@
 	<link rel="stylesheet" href="assets/styles/default.css">
 	<link rel="stylesheet" href="assets/styles/dark.css" id="game-theme">
 	<link rel="stylesheet" href="assets/styles/gui.css">
-	<script src="assets/scripts/elements/GameInstance.js"></script>
+	<script src="assets/scripts/elements/GameView.js"></script>
 	<script src="assets/scripts/elements/SmartLabel.js"></script>
 </head>
 <body>
-	<bhr-instance class="vignette" id="game-container" track-src="demo/track.txt" write>
+	<game-view class="vignette" id="game-container" track-src="demo/track.txt" write>
 		<canvas id="main" part="main"></canvas>
 		<div class="gui">
 			<div class="toolbar scale">
-				<!-- <section class="bottom island right">
-					<button class="toolbar-item fullscreen" title="Fullscreen - F" onclick="document.fullscreenElement ? document.exitFullscreen() : game.container.requestFullscreen()"></button>
-				</section> -->
 				<section class="bottom center island">
 					<button class="toolbar-item rewind" title="Cancel Checkpoint - Backspace" onclick="game.scene.removeCheckpoint()"></button>
 					<button class="toolbar-item backtrack" title="Checkpoint - Enter" onclick="game.scene.returnToCheckpoint()"></button>
@@ -32,8 +29,8 @@
 					<button class="toolbar-item" title="Stop recording - Backspace" onclick="game.scene.removeCheckpoint()">◾</button>◼ /◾ -->
 				</section>
 				<section class="island left middle" id="toolbar">
-					<button class="toolbar-item" tooltip="Brush" kbd="a" data-tool="brush" data-options="line-style tool-settings" onclick="game.scene.toolHandler.setTool(this.dataset.tool, document.querySelector('#line-style .scenery > input[name=style]').checked)"><input type="radio" name="tool" hidden>●</button>
-					<button class="toolbar-item" tooltip="Line" kbd="q" data-tool="line" data-options="line-style" onclick="game.scene.toolHandler.setTool(this.dataset.tool, document.querySelector('#line-style .scenery > input[name=style]').checked)">
+					<button class="toolbar-item" tooltip="Brush" kbd="a" data-tool="brush" data-options="line-style tool-settings" onclick="game.scene.toolHandler.set(this.dataset.tool, document.querySelector('#line-style .scenery > input[name=style]').checked)"><input type="radio" name="tool" hidden>●</button>
+					<button class="toolbar-item" tooltip="Line" kbd="q" data-tool="line" data-options="line-style" onclick="game.scene.toolHandler.set(this.dataset.tool, document.querySelector('#line-style .scenery > input[name=style]').checked)">
 						<input type="radio" name="tool" checked hidden>
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 							<line x1="15" y1="1" x2="1" y2="15" stroke="currentColor" stroke-linecap="round" stroke-width="2"/>
@@ -45,12 +42,12 @@
 						</svg>
 					</label>
 					<label class="toolbar-item" tooltip="Grid" kbd="g">
-						<input type="checkbox" hidden onchange="game.scene.sectors.size = 11 - game.scene.sectors.size">
+						<input type="checkbox" hidden onchange="game.scene.toolHandler.grid.size = 11 - game.scene.toolHandler.grid.size">
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 							<path d="M15 1H9.5V6.5H15ZM6.5 1H1V6.5H6.5ZM15 9.5H9.5V15H15ZM6.5 9.5H1V15H6.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="2"/>
 						</svg>
 					</label>
-					<button class="toolbar-item" tooltip="Eraser" kbd="e" data-tool="eraser" data-options="eraser-options tool-settings" onclick="game.scene.toolHandler.setTool(this.dataset.tool)">
+					<button class="toolbar-item" tooltip="Eraser" kbd="e" data-tool="eraser" data-options="eraser-options tool-settings" onclick="game.scene.toolHandler.set(this.dataset.tool)">
 						<input type="radio" name="tool" hidden>
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><circle cx="1" cy="1" r="1" fill="#ffb6c199"/></svg>
 					</button>
@@ -71,7 +68,7 @@
 								M12.5 12.5L19.43 8.5" />
 						</svg>
 					</button>
-					<button class="toolbar-item" tooltip="Camera" kbd="r" data-tool="camera" data-options="tool-settings" onclick="game.scene.toolHandler.setTool(this.dataset.tool)">
+					<button class="toolbar-item" tooltip="Camera" kbd="r" data-tool="camera" data-options="tool-settings" onclick="game.scene.toolHandler.set(this.dataset.tool)">
 						<input type="radio" name="tool" hidden>
 						<svg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" viewBox="0 0 16 16">
 							<circle cx="8" cy="8" r="5" fill="none"/>
@@ -81,7 +78,7 @@
 				</section>
 				<section class="island middle right tool-options" id="tool-options">
 					<div id="powerups">
-						<smart-label class="toolbar-item" name="powerup" tooltip="Target" onchange="game.scene.toolHandler.setTool('goal')" checked>
+						<smart-label class="toolbar-item" name="powerup" tooltip="Target" onchange="game.scene.toolHandler.set('goal')" checked>
 							<svg width="1em" height="1em">
 								<defs>
 									<symbol id="powerup" viewBox="0 0 16 16">
@@ -91,10 +88,10 @@
 								<use href="#powerup" fill="#ff0"/>
 							</svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Checkpoint" onchange="game.scene.toolHandler.setTool('checkpoint')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Checkpoint" onchange="game.scene.toolHandler.set('checkpoint')">
 							<svg width="1em" height="1em"><use href="#powerup" fill="#00f"/></svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Boost" onchange="game.scene.toolHandler.setTool('boost')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Boost" onchange="game.scene.toolHandler.set('boost')">
 							<svg width="1em" height="1em">
 								<defs>
 									<symbol id="triangle-powerup" viewBox="0 0 16 16">
@@ -104,34 +101,40 @@
 								<use href="#triangle-powerup" fill="#ff0"/>
 							</svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Gravity" onchange="game.scene.toolHandler.setTool('gravity')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Gravity" onchange="game.scene.toolHandler.set('gravity')">
 							<svg width="1em" height="1em"><use href="#triangle-powerup" fill="#0f0"/></svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Bomb" onchange="game.scene.toolHandler.setTool('bomb')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Bomb" onchange="game.scene.toolHandler.set('bomb')">
 							<svg width="1em" height="1em"><use href="#powerup" fill="#f00"/></svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Slow-motion" onchange="game.scene.toolHandler.setTool('slow-mo')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Slow-motion" onchange="game.scene.toolHandler.set('slow-mo')">
 							<svg width="1em" height="1em"><use href="#powerup" fill="#eee"/></svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Anti-gravity" onchange="game.scene.toolHandler.setTool('antigravity')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Anti-gravity" onchange="game.scene.toolHandler.set('antigravity')">
 							<svg width="1em" height="1em"><use href="#powerup" fill="#0ff"/></svg>
 						</smart-label>
-						<smart-label class="toolbar-item" name="powerup" tooltip="Teleporter" onchange="game.scene.toolHandler.setTool('teleporter')">
+						<smart-label class="toolbar-item" name="powerup" tooltip="Teleporter" onchange="game.scene.toolHandler.set('teleporter')">
 							<svg width="1em" height="1em"><use href="#powerup" fill="#f0f"/></svg>
+						</smart-label>
+						<!-- <smart-label class="toolbar-item disabled" name="powerup" tooltip="Gravitational Field" disabled onchange="game.scene.toolHandler.set('gravitational-field')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#222"/></svg>
+						</smart-label> -->
+						<smart-label class="toolbar-item" name="powerup" tooltip="Gravitational Field" onchange="game.scene.toolHandler.set('gravitational-field')">
+							<svg width="1em" height="1em"><use href="#powerup" fill="#222"/></svg>
 						</smart-label>
 					</div>
 					<div id="line-style" style="display:none">
-						<label class="toolbar-item" tooltip="Physics" onchange="game.scene.toolHandler.setTool(game.scene.toolHandler.selected, false)"><input type="radio" name="style" checked hidden>●</label>
-						<label class="toolbar-item scenery" tooltip="Scenery" onchange="game.scene.toolHandler.setTool(game.scene.toolHandler.selected, true)"><input type="radio" name="style" hidden>●</label>
+						<label class="toolbar-item" tooltip="Physics" onchange="game.scene.toolHandler.set(game.scene.toolHandler.selected, false)"><input type="radio" name="style" checked hidden>●</label>
+						<label class="toolbar-item scenery" tooltip="Scenery" onchange="game.scene.toolHandler.set(game.scene.toolHandler.selected, true)"><input type="radio" name="style" hidden>●</label>
 					</div>
 					<div id="tool-settings" style="display:none">
-						<button class="toolbar-item increment" tooltip="Increase length" kbd="a+scroll" onclick="game.scene.toolHandler.currentTool.scroll({ wheelDelta: 1 });">
+						<button class="toolbar-item increment" tooltip="Increase length" kbd="a+scroll" onclick="game.scene.toolHandler._dispatchSyntheticScroll(1);">
 							<svg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 16 16">
 								<line x1="1" x2="15" y1="8" y2="8"/>
 								<line x1="8" x2="8" y1="1" y2="15"/>
 							</svg>
 						</button>
-						<button class="toolbar-item decrement" tooltip="Decrease length" kbd="a+Scroll" onclick="game.scene.toolHandler.currentTool.scroll({ wheelDelta: -1 });">
+						<button class="toolbar-item decrement" tooltip="Decrease length" kbd="a+Scroll" onclick="game.scene.toolHandler._dispatchSyntheticScroll(-1);">
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 								<line x1="1" x2="15" y1="8" y2="8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
 							</svg>
@@ -195,13 +198,13 @@
 				<button onclick="game.openFile({ multiple: event.ctrlKey })">Open File...</button>
 				<!-- Open folder option allowing users to work on multiple tracks at once w/ different layers.
 					This could help with "stop motion" tracks -->
-				<button onclick="code.value = game.scene.toString();trackdialog.showModal();">Save</button>
+				<button onclick="code.value=game.scene.track.toString();trackdialog.showModal();">Save</button>
 				<button onclick="game.saveAs()">Save As...</button>
 				<button onclick="game.showRecentFiles()">Show Recent Files</button>
 				<button id="upload">Upload</button>
 				<script>
 					upload.addEventListener('click', function () {
-						const code = game.scene.toString();
+						const code = game.scene.track.toString();
 						if (code.length < 1e3) {
 							return alert("Sorry, but your track must be bigger or more detailed.");
 						} else if (game.scene.targets < 1) {
@@ -210,7 +213,7 @@
 
 						// add 'collaborators' input
 						game.scene.paused = true;
-						game.scene.toolHandler.setTool('camera');
+						game.scene.toolHandler.set('camera');
 						game.scene.pictureMode = {width: 250, height: 150};
 						game.scene.zoom = 0.6 * window.devicePixelRatio;
 						game.scene.sectors.sectors.forEach(sector => sector.rendered = false);
@@ -272,7 +275,7 @@
 									canvas.width = 250;
 									canvas.height = 150;
 									const ctx = canvas.getContext('2d');
-									ctx.fillStyle = game.canvas.computedStyleMap().get('background-color').toString();
+									ctx.fillStyle = typeof game.canvas.computedStyleMap == 'function' ? game.canvas.computedStyleMap().get('background-color').toString() : getComputedStyle(game.canvas).backgroundColor;
 									ctx.fillRect(0, 0, canvas.width, canvas.height);
 									ctx.drawImage(game.canvas, game.canvas.width / 2 - canvas.width / 2, game.canvas.height / 2 - canvas.height / 2, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
 									game.scene.pictureMode = false;
@@ -427,7 +430,7 @@
 			<button id="exit" style="margin: 1rem;max-width: 25vmin;" onclick="window.close()">Exit to desktop</button>
 		</div>
 		<div class="toast-container" id="toasts"></div>
-	</bhr-instance>
+	</game-view>
 	<script type="module" src="bootstrap.js"></script>
 	<script>
 		const gameContainer = document.querySelector('#game-container');
@@ -436,10 +439,13 @@
 			const searchParams = new URLSearchParams(location.search);
 			if (searchParams.has('demo')) {
 				const demo = await fetch('demo/track.txt').then(r => r.text());
-				// game.once('load', async function() {
-				// 	const demoGhost = await fetch('demo/ghost.txt').then(r => r.text());
-				// 	this.scene.watchGhost(demoGhost);
-				// });
+				if (searchParams.has('replay')) {
+					game.once('load', async function() {
+						const demoGhost = await fetch('demo/replay.txt').then(r => r.text());
+						this.scene.watchGhost(demoGhost);
+					});
+				}
+
 				game.init({ code: demo, write: true });
 			} else
 				game.init({ default: true, write: true });

@@ -1,5 +1,9 @@
 export default class extends Array {
-	cache = []
+	constructor() {
+		super();
+		Object.defineProperty(this, 'cache', { value: [], writable: true });
+	}
+
 	push() {
 		this.cache.splice(0);
 		return super.push(...arguments);

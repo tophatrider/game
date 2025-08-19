@@ -1,6 +1,8 @@
 import Grid from "./modules/Grid.js";
 import Sector from "./modules/Sector.js";
 
+// const offscreen = new OffscreenCanvas(0, 0);
+
 Object.defineProperties(self, {
 	config: { value: {}, writable: true },
 	grid: { value: new Grid(), writable: true }
@@ -8,29 +10,6 @@ Object.defineProperties(self, {
 
 addEventListener('message', async function({ data }) {
 	switch (data.type) {
-	case 'ADD_ITEM': {
-		const { column, row, foreground, track } = data;
-		const sector = grid.get(column, row);
-		if (!sector) break;
-		if (foreground && foreground.length > 0)
-			for (const line of foreground)
-				sector.sceneryLines.push(line);
-		if (track && track.length > 0)
-			for (const line of track)
-				sector.physicsLines.push(line);
-		// sector.render();
-		break;
-	}
-
-	case 'ADD_SCENERY': {
-		const { column, row, item } = data;
-		const sector = grid.get(column, row);
-		if (!sector) break;
-		sector.sceneryLines.push(item);
-		sector.render();
-		break;
-	}
-
 	case 'CONFIG': {
 		Object.assign(config, data.config);
 		for (const column of grid.sectors.values()) {
@@ -45,16 +24,27 @@ addEventListener('message', async function({ data }) {
 		break;
 	}
 
+	case 'PUSH': {
+		const { column, row, buffer, scenery } = data;
+		const sector = grid.get(column, row);
+		if (!sector) break;
+		const intView = new Int32Array(buffer);
+		sector.add(intView, scenery);
+		if (!scenery) {
+			sector.draw(intView);
+			break;
+		}
+
+		sector.render();
+		break;
+	}
+
 	case 'RENDER': {
-		const { column, row, data: { physicsLines, sceneryLines }} = data;
+		const { column, row } = data;
 		const sector = grid.get(column, row);
 		if (!sector) return console.warn(`Sector not found (${column}, ${row})`);
-
 		sector.timeout && sector.cancel();
-
-		sector.physicsLines = physicsLines;
-		sceneryLines && (sector.sceneryLines = sceneryLines);
-
+		sector.dirty = true;
 		sector.render();
 		break;
 	}

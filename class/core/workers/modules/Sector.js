@@ -1,50 +1,47 @@
 export default class Sector {
+	_rendering = false;
+	_sessionId = null;
+	_timeout = null;
+
 	column = null;
+	dirty = true;
 	row = null;
-	physicsLines = [];
-	sceneryLines = [];
+	physicsLines = new Int32Array();
+	sceneryLines = new Int32Array();
 	offscreen = grid.canvasPool.getCanvas();
-	ctx = this.offscreen.getContext('2d');
+	ctx = this.offscreen.getContext('2d'/*, { alpha: false }*/);
 	constructor(data) {
 		Object.assign(this, data);
 		// this.config();
 	}
 
-	async render() {
-		// this.ctx.clearRect(0, 0, this.offscreen.width, this.offscreen.height);
-		this.ctx.clearRect(this.column, this.row, this.offscreen.width / config.zoom, this.offscreen.height / config.zoom);
-		// this.ctx.fillRect(this.column, this.row, this.offscreen.width / config.zoom, this.offscreen.height / config.zoom);
+	_sendBitmap(partial = false) {
+		const bitmap = snapshotCanvas(this.offscreen);
+		postMessage({
+			column: this.column,
+			row: this.row,
+			partial,
+			bitmap
+		}, [bitmap]);
+	}
 
-		const sendBitmap = async (partial = false) => {
-			const bitmap = snapshotCanvas(this.offscreen);
-			postMessage({
-				column: this.column,
-				row: this.row,
-				partial,
-				bitmap
-			}, [bitmap]);
-		};
-		const sendBitmapUpdate = () => sendBitmap(true);
+	add(buffer, foreground) {
+		const target = foreground ? 'sceneryLines' : 'physicsLines'
+			, oldArray = this[target]
+			, size = oldArray.length + buffer.length
+			, newArray = new Int32Array(size);
 
-		const sessionId = crypto.randomUUID();
-		this.sessionId = sessionId;
+		newArray.set(oldArray, 0);
+		newArray.set(buffer, oldArray.length);
 
-		this.sceneryLines.length > 0 && await drawLinesInChunks(this.ctx, {
-			lines: this.sceneryLines,
-			strokeColor: config.palette.foreground,
-			sector: this,
-			sessionId
-		}, sendBitmapUpdate);
+		this[target] = newArray;
+	}
 
-		this.physicsLines.length > 0 && await drawLinesInChunks(this.ctx, {
-			lines: this.physicsLines,
-			strokeColor: config.palette.track,
-			sector: this,
-			sessionId
-		}, sendBitmapUpdate);
-
-		delete this.sessionId;
-		sendBitmap(false);
+	cancel() {
+		this._rendering = false;
+		clearTimeout(this._timeout);
+		this._timeout = null;
+		this._sessionId = null;
 	}
 
 	config() {
@@ -57,8 +54,44 @@ export default class Sector {
 		this.ctx.lineWidth = 2;
 	}
 
-	draw() {
-		// only draw added line -- no need to clear unless line is foreground
+	async render() {
+		if (this._timeout) {
+			this.cancel();
+			console.warn('[Sector] Render frame cancelled');
+		}
+		// this._timeout && this.cancel();
+
+		if (this.dirty) {
+			// this.ctx.clearRect(0, 0, this.offscreen.width, this.offscreen.height);
+			this.ctx.clearRect(this.column * config.scale, this.row * config.scale, this.offscreen.width / config.zoom, this.offscreen.height / config.zoom);
+			// this.ctx.fillRect(this.column * config.scale, this.row * config.scale, this.offscreen.width / config.zoom, this.offscreen.height / config.zoom);
+			this.dirty = false;
+		}
+
+		// const sendBitmapUpdate = () => this._sendBitmap(true);
+
+		// const sessionId = crypto.randomUUID();
+		// this._sessionId = sessionId;
+
+		this.sceneryLines && await this.draw(this.ctx, this.sceneryLines, { strokeColor: config.palette.foreground });
+		this.physicsLines && await this.draw(this.ctx, this.physicsLines, { strokeColor: config.palette.track });
+
+		// this._sessionId = null;
+		// this._sendBitmap(false);
+	}
+
+	async draw(ctx, view, options) {
+		const sessionId = crypto.randomUUID();
+		this._sessionId = sessionId;
+
+		await drawLinesInChunks(ctx, Object.assign({
+			lines: view,
+			sector: this,
+			sessionId
+		}, options), this._sendBitmap.bind(this, true));
+
+		this._sessionId = null;
+		this._sendBitmap(false);
 	}
 }
 
@@ -72,49 +105,39 @@ async function drawLinesInChunks(ctx, {
 	progressEvery = 1
 }, onChunkDrawn) {
 	if (!lines || lines.length < 1) return;
+	const len = lines.length;
+	let index = 0
+	  , chunkCount = 0;
+	strokeColor && (ctx.strokeStyle = strokeColor);
 	return new Promise((resolve, reject) => {
-		try {
-			const len = lines.length
-			let index = 0
-			  , chunkCount = 0;
-			strokeColor && (ctx.strokeStyle = strokeColor);
-			const drawChunk = () => {
-				if (sector.sessionId !== sessionId) return reject('Cancelled');
+		const drawChunk = () => {
+			if (sector._sessionId !== sessionId) return reject('Cancelled');
 
-				const end = Math.min(index + chunkSize, len);
-				ctx.beginPath();
-				// Use Path2D for Polylines (lines with 3 or more points)
-				for (; index < end; index++) {
-					const { p1: s, p2: n } = lines[index];
-					ctx.moveTo(s.x, s.y);
-					ctx.lineTo(n.x, n.y);
-				}
+			const end = Math.min(index + chunkSize, len);
+			ctx.beginPath();
+			// Use Path2D for Polylines (lines with 3 or more points)
+			for (; index < end; index += 4) {
+				ctx.moveTo(lines[index], lines[index + 1]);
+				ctx.lineTo(lines[index + 2], lines[index + 3]);
+			}
 
-				ctx.stroke();
+			ctx.stroke();
 
-				const complete = index >= len;
-				if (++chunkCount % progressEvery === 0 || complete) {
-					onChunkDrawn?.();
-				}
+			const complete = index >= len;
+			if (++chunkCount % progressEvery === 0 || complete) {
+				onChunkDrawn?.();
+			}
 
-				if (!complete) {
-					const timeoutId = setTimeout(drawChunk, 0);
-					sector.timeout = timeoutId;
-					sector.cancel = () => {
-						clearTimeout(timeoutId);
-						delete sector.timeout;
-						delete sector.sessionId
-					};
-					timeout?.(timeoutId);
-				} else {
-					delete sector.timeout;
-					resolve();
-				}
-			};
-			drawChunk();
-		} catch (err) {
-			reject(err)
-		}
+			if (!complete) {
+				const timeoutId = setTimeout(drawChunk, 0);
+				sector._timeout = timeoutId;
+				timeout?.(timeoutId);
+			} else {
+				sector._timeout = null;
+				resolve();
+			}
+		};
+		drawChunk();
 	})
 }
 
